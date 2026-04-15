@@ -1,0 +1,66 @@
+{
+  "title": "認証システム刷新プラン",
+  "description": "セッションベースからJWT認証への移行により、スケーラビリティとセキュリティを向上させる。",
+  "glossary": [
+    {
+      "id": "user-auth",
+      "type": "feature",
+      "name": "ユーザー認証",
+      "description": "ログイン・ログアウト・パスワードリセットを担当するモジュール",
+      "icon": "🔐"
+    },
+    {
+      "id": "session",
+      "type": "data",
+      "name": "セッション",
+      "description": "サーバーサイドで管理するユーザーセッション情報",
+      "icon": "🗂️"
+    },
+    {
+      "id": "jwt-token",
+      "type": "data",
+      "name": "JWTトークン",
+      "description": "クライアントサイドで保持するJSONウェブトークン",
+      "icon": "🎫"
+    },
+    {
+      "id": "api-gateway",
+      "type": "feature",
+      "name": "APIゲートウェイ",
+      "description": "外部からのリクエストを受け付け、内部サービスにルーティングする",
+      "icon": "🌐"
+    },
+    {
+      "id": "user-service",
+      "type": "feature",
+      "name": "ユーザーサービス",
+      "description": "ユーザー情報のCRUDを提供するマイクロサービス"
+    },
+    {
+      "id": "audit-log",
+      "type": "term",
+      "name": "監査ログ",
+      "description": "セキュリティイベントや認証試行を記録するログストレージ",
+      "icon": "📋"
+    }
+  ],
+  "currentState": {
+    "description": "現在はサーバーサイドセッションを使用しており、スケールアウト時にセッション共有が課題となっている。",
+    "interactions": [
+      { "source": "user-auth", "target": "session", "label": "Cookie発行", "data": "SessionID" },
+      { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
+      { "source": "user-auth", "target": "audit-log", "label": "ログ記録", "data": "LoginEvent" },
+      { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" }
+    ]
+  },
+  "proposedState": {
+    "description": "JWTを導入することでステートレス認証を実現し、水平スケーリングを容易にする。",
+    "interactions": [
+      { "source": "user-auth", "target": "jwt-token", "label": "JWT発行", "data": "AuthToken" },
+      { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
+      { "source": "user-auth", "target": "audit-log", "label": "ログ記録", "data": "SecurityEvent" },
+      { "source": "api-gateway", "target": "jwt-token", "label": "トークン検証", "data": "BearerToken" },
+      { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" }
+    ]
+  }
+}
