@@ -3,38 +3,57 @@
   "description": "セッションベースからJWT認証への移行により、スケーラビリティとセキュリティを向上させる。",
   "glossary": [
     {
+      "id": "backend",
+      "type": "feature",
+      "name": "バックエンド",
+      "description": "サーバーサイドの処理を担当するレイヤー",
+      "icon": "🖥️"
+    },
+    {
       "id": "user-auth",
       "type": "feature",
       "name": "ユーザー認証",
       "description": "ログイン・ログアウト・パスワードリセットを担当するモジュール",
-      "icon": "🔐"
+      "icon": "🔐",
+      "parentId": "backend"
     },
     {
-      "id": "session",
-      "type": "data",
-      "name": "セッション",
-      "description": "サーバーサイドで管理するユーザーセッション情報",
-      "icon": "🗂️"
-    },
-    {
-      "id": "jwt-token",
-      "type": "data",
-      "name": "JWTトークン",
-      "description": "クライアントサイドで保持するJSONウェブトークン",
-      "icon": "🎫"
+      "id": "user-service",
+      "type": "feature",
+      "name": "ユーザーサービス",
+      "description": "ユーザー情報のCRUDを提供するマイクロサービス",
+      "parentId": "backend"
     },
     {
       "id": "api-gateway",
       "type": "feature",
       "name": "APIゲートウェイ",
       "description": "外部からのリクエストを受け付け、内部サービスにルーティングする",
-      "icon": "🌐"
+      "icon": "🌐",
+      "parentId": "backend"
     },
     {
-      "id": "user-service",
-      "type": "feature",
-      "name": "ユーザーサービス",
-      "description": "ユーザー情報のCRUDを提供するマイクロサービス"
+      "id": "data-layer",
+      "type": "data",
+      "name": "データストア",
+      "description": "永続化されるデータの管理レイヤー",
+      "icon": "💾"
+    },
+    {
+      "id": "session",
+      "type": "data",
+      "name": "セッション",
+      "description": "サーバーサイドで管理するユーザーセッション情報",
+      "icon": "🗂️",
+      "parentId": "data-layer"
+    },
+    {
+      "id": "jwt-token",
+      "type": "data",
+      "name": "JWTトークン",
+      "description": "クライアントサイドで保持するJSONウェブトークン",
+      "icon": "🎫",
+      "parentId": "data-layer"
     },
     {
       "id": "audit-log",

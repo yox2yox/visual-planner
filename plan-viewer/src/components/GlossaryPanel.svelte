@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { GlossaryItem, GlossaryType } from '../types'
-  import { filterGlossary } from '../utils/filter'
+  import { buildTree, filterTree, flattenTree, type TreeNode } from '../utils/filter'
   import { selectedGlossaryId } from '../stores'
 
   interface Props {
@@ -42,15 +42,48 @@
     data: 'データ',
   }
 
-  let filtered = $derived(filterGlossary(items, activeTab))
+  let tree = $derived(buildTree(items))
+  let filteredTree = $derived(filterTree(tree, activeTab))
+  let flatNodes = $derived(flattenTree(filteredTree))
+  let itemMap = $derived(new Map(items.map((i) => [i.id, i])))
+
   let selectedId = $state<string | null>(null)
 
-  selectedGlossaryId.subscribe((v) => {
-    selectedId = v
+  $effect(() => {
+    const unsubscribe = selectedGlossaryId.subscribe((v) => {
+      selectedId = v
+    })
+    return unsubscribe
   })
 
   function handleCardClick(id: string) {
     selectedGlossaryId.update((current) => (current === id ? null : id))
+  }
+
+  let collapsed = $state<Set<string>>(new Set())
+
+  function toggleCollapse(id: string) {
+    collapsed = new Set(collapsed)
+    if (collapsed.has(id)) {
+      collapsed.delete(id)
+    } else {
+      collapsed.add(id)
+    }
+  }
+
+  function isVisible(node: TreeNode): boolean {
+    let current = node.item.parentId
+    const seen = new Set<string>()
+    while (current && itemMap.has(current) && !seen.has(current)) {
+      seen.add(current)
+      if (collapsed.has(current)) return false
+      current = itemMap.get(current)?.parentId
+    }
+    return true
+  }
+
+  function hasChildren(node: TreeNode): boolean {
+    return node.children.length > 0
   }
 </script>
 
@@ -68,23 +101,39 @@
       </button>
     {/each}
   </div>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-    {#each filtered as item (item.id)}
-      <button
-        class="text-left p-4 rounded-lg border cursor-pointer transition-all {typeColors[item.type]} {selectedId === item.id ? 'ring-2 ring-offset-1 ring-blue-400' : 'hover:shadow-md'}"
-        onclick={() => handleCardClick(item.id)}
-      >
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-xl">{item.icon ?? defaultIcons[item.type]}</span>
-          <span class="text-xs font-medium px-2 py-0.5 rounded {typeBadgeColors[item.type]}">
-            {typeLabels[item.type]}
-          </span>
+  <div class="space-y-1">
+    {#each flatNodes as node (node.item.id)}
+      {#if isVisible(node)}
+        <div
+          class="w-full text-left rounded-lg border transition-all cursor-pointer {typeColors[node.item.type]} {selectedId === node.item.id ? 'ring-2 ring-offset-1 ring-blue-400' : 'hover:shadow-md'}"
+          style="margin-left: {node.depth * 24}px; padding: {node.depth === 0 ? '12px 16px' : '8px 16px'};"
+          role="button"
+          tabindex="0"
+          onclick={() => handleCardClick(node.item.id)}
+          onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick(node.item.id) }}
+        >
+          <div class="flex items-center gap-2">
+            {#if hasChildren(node)}
+              <button
+                class="text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center flex-shrink-0"
+                onclick={(e: MouseEvent) => { e.stopPropagation(); toggleCollapse(node.item.id) }}
+              >
+                <span class="text-xs">{collapsed.has(node.item.id) ? '▶' : '▼'}</span>
+              </button>
+            {:else}
+              <span class="w-5 flex-shrink-0"></span>
+            {/if}
+            <span class="text-lg">{node.item.icon ?? defaultIcons[node.item.type]}</span>
+            <span class="text-xs font-medium px-2 py-0.5 rounded {typeBadgeColors[node.item.type]}">
+              {typeLabels[node.item.type]}
+            </span>
+            <p class="font-bold text-gray-900 text-sm flex-1">{node.item.name}</p>
+          </div>
+          {#if node.item.description}
+            <p class="text-xs text-gray-600 mt-1 ml-7 line-clamp-2">{node.item.description}</p>
+          {/if}
         </div>
-        <p class="font-bold text-gray-900 text-sm">{item.name}</p>
-        {#if item.description}
-          <p class="text-xs text-gray-600 mt-1 line-clamp-2">{item.description}</p>
-        {/if}
-      </button>
+      {/if}
     {/each}
   </div>
 </section>

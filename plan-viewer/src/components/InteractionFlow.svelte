@@ -5,6 +5,7 @@
   import type { Node, Edge } from '@xyflow/svelte'
   import type { GlossaryItem, Interaction, DiffEdge } from '../types'
   import { computeDiffEdges } from '../utils/diff'
+  import { buildTree, type TreeNode } from '../utils/filter'
   import { selectedGlossaryId } from '../stores'
 
   interface Props {
@@ -16,11 +17,15 @@
 
   const { glossary, interactions, isDiff = false, baseInteractions = [] }: Props = $props()
 
-  const COLS = 3
   const NODE_W = 180
   const NODE_H = 60
-  const GAP_X = 60
-  const GAP_Y = 60
+  const GAP_X = 40
+  const GAP_Y = 40
+  const GROUP_PAD_X = 20
+  const GROUP_PAD_Y = 40
+  const GROUP_GAP = 60
+  const GROUP_HEADER = 30
+  const COLS_IN_GROUP = 3
 
   const typeColors: Record<string, string> = {
     term: '#ede9fe',
@@ -32,35 +37,161 @@
     feature: '#2563eb',
     data: '#16a34a',
   }
+  const groupBgColors: Record<string, string> = {
+    term: '#f5f3ff',
+    feature: '#eff6ff',
+    data: '#f0fdf4',
+  }
   const defaultIcons: Record<string, string> = {
     term: '📖',
     feature: '⚡',
     data: '💾',
   }
 
-  function buildNodes(items: GlossaryItem[], selectedId: string | null): Node[] {
-    return items.map((item, index) => {
-      const col = index % COLS
-      const row = Math.floor(index / COLS)
-      const isSelected = selectedId === item.id
-      return {
-        id: item.id,
-        position: { x: col * (NODE_W + GAP_X), y: row * (NODE_H + GAP_Y) },
-        data: {
-          label: `${item.icon ?? defaultIcons[item.type] ?? ''} ${item.name}`,
-        },
+  function makeNodeStyle(item: GlossaryItem, isSelected: boolean): string {
+    return [
+      `background: ${typeColors[item.type] ?? '#f3f4f6'};`,
+      `border: 2px solid ${typeBorderColors[item.type] ?? '#6b7280'};`,
+      'border-radius: 8px;',
+      'padding: 8px 12px;',
+      'font-size: 13px;',
+      'font-weight: 600;',
+      `min-width: ${NODE_W}px;`,
+      isSelected ? 'box-shadow: 0 0 0 3px #3b82f6;' : '',
+    ].join(' ')
+  }
+
+  function makeNodeLabel(item: GlossaryItem): string {
+    return `${item.icon ?? defaultIcons[item.type] ?? ''} ${item.name}`
+  }
+
+  interface LayoutResult {
+    nodes: Node[]
+    totalHeight: number
+  }
+
+  function buildHierarchicalLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
+    const tree = buildTree(items)
+    const nodes: Node[] = []
+    let currentY = 0
+
+    function layoutGroup(treeNode: TreeNode, offsetX: number, offsetY: number): { width: number; height: number } {
+      const children = treeNode.children
+      const leafChildren = children.filter((c) => c.children.length === 0)
+      const groupChildren = children.filter((c) => c.children.length > 0)
+
+      if (children.length === 0) {
+        // Leaf node — push it as a regular node
+        nodes.push({
+          id: treeNode.item.id,
+          position: { x: offsetX, y: offsetY },
+          data: { label: makeNodeLabel(treeNode.item) },
+          style: makeNodeStyle(treeNode.item, selectedId === treeNode.item.id),
+        })
+        return { width: NODE_W, height: NODE_H }
+      }
+
+      // This node has children — push group background placeholder first (z-order: behind children)
+      const groupNodeIndex = nodes.length
+      nodes.push({
+        id: treeNode.item.id,
+        position: { x: offsetX, y: offsetY },
+        data: { label: makeNodeLabel(treeNode.item) },
+        style: '', // will be updated after size is computed
+      })
+
+      let innerY = GROUP_HEADER + GROUP_PAD_Y
+
+      // Layout leaf children in grid inside this group
+      for (let i = 0; i < leafChildren.length; i++) {
+        const col = i % COLS_IN_GROUP
+        const row = Math.floor(i / COLS_IN_GROUP)
+        const child = leafChildren[i]
+        nodes.push({
+          id: child.item.id,
+          position: {
+            x: offsetX + GROUP_PAD_X + col * (NODE_W + GAP_X),
+            y: offsetY + innerY + row * (NODE_H + GAP_Y),
+          },
+          data: { label: makeNodeLabel(child.item) },
+          style: makeNodeStyle(child.item, selectedId === child.item.id),
+        })
+      }
+
+      const leafCols = Math.min(leafChildren.length, COLS_IN_GROUP)
+      const leafRows = Math.ceil(leafChildren.length / COLS_IN_GROUP)
+      const leafBlockHeight = leafRows > 0 ? leafRows * (NODE_H + GAP_Y) : 0
+      let subGroupY = innerY + leafBlockHeight
+
+      // Layout sub-groups below leaf children
+      let maxSubGroupWidth = 0
+      for (const subGroup of groupChildren) {
+        const sub = layoutGroup(subGroup, offsetX + GROUP_PAD_X, offsetY + subGroupY)
+        subGroupY += sub.height + GAP_Y
+        maxSubGroupWidth = Math.max(maxSubGroupWidth, sub.width)
+      }
+
+      const contentWidth = Math.max(
+        leafCols * (NODE_W + GAP_X) - GAP_X,
+        maxSubGroupWidth,
+        NODE_W
+      )
+      const groupWidth = contentWidth + GROUP_PAD_X * 2
+      const groupHeight = subGroupY + GROUP_PAD_Y
+
+      // Update group background node with computed size
+      nodes[groupNodeIndex] = {
+        id: treeNode.item.id,
+        position: { x: offsetX, y: offsetY },
+        data: { label: makeNodeLabel(treeNode.item) },
         style: [
-          `background: ${typeColors[item.type] ?? '#f3f4f6'};`,
-          `border: 2px solid ${typeBorderColors[item.type] ?? '#6b7280'};`,
-          'border-radius: 8px;',
-          'padding: 8px 12px;',
-          'font-size: 13px;',
-          'font-weight: 600;',
-          `min-width: ${NODE_W}px;`,
-          isSelected ? 'box-shadow: 0 0 0 3px #3b82f6;' : '',
+          `background: ${groupBgColors[treeNode.item.type] ?? '#f9fafb'};`,
+          `border: 2px dashed ${typeBorderColors[treeNode.item.type] ?? '#9ca3af'};`,
+          'border-radius: 12px;',
+          'padding: 12px 16px;',
+          'font-size: 14px;',
+          'font-weight: 700;',
+          `width: ${groupWidth}px;`,
+          `height: ${groupHeight}px;`,
+          selectedId === treeNode.item.id ? 'box-shadow: 0 0 0 3px #3b82f6;' : '',
         ].join(' '),
       }
-    })
+
+      return { width: groupWidth, height: groupHeight }
+    }
+
+    // Layout root-level nodes
+    const rootLeaves = tree.filter((n) => n.children.length === 0)
+    const rootGroups = tree.filter((n) => n.children.length > 0)
+
+    // Place root groups vertically
+    let yOffset = 0
+    for (const group of rootGroups) {
+      const result = layoutGroup(group, 0, yOffset)
+      yOffset += result.height + GROUP_GAP
+    }
+
+    // Place root leaf nodes below groups in a grid
+    if (rootLeaves.length > 0) {
+      for (let i = 0; i < rootLeaves.length; i++) {
+        const col = i % COLS_IN_GROUP
+        const row = Math.floor(i / COLS_IN_GROUP)
+        const leaf = rootLeaves[i]
+        nodes.push({
+          id: leaf.item.id,
+          position: {
+            x: col * (NODE_W + GAP_X),
+            y: yOffset + row * (NODE_H + GAP_Y),
+          },
+          data: { label: makeNodeLabel(leaf.item) },
+          style: makeNodeStyle(leaf.item, selectedId === leaf.item.id),
+        })
+      }
+      const leafRows = Math.ceil(rootLeaves.length / COLS_IN_GROUP)
+      yOffset += leafRows * (NODE_H + GAP_Y)
+    }
+
+    return { nodes, totalHeight: yOffset }
   }
 
   function edgeStyle(status: DiffEdge['status']): string {
@@ -119,8 +250,12 @@
   }
 
   let selectedId = $state<string | null>(null)
-  selectedGlossaryId.subscribe((v) => {
-    selectedId = v
+
+  $effect(() => {
+    const unsubscribe = selectedGlossaryId.subscribe((v) => {
+      selectedId = v
+    })
+    return unsubscribe
   })
 
   const diffEdges = $derived(
@@ -130,8 +265,10 @@
   const nodesStore = writable<Node[]>([])
   const edgesStore = writable<Edge[]>([])
 
+  let layout = $derived(buildHierarchicalLayout(glossary, selectedId))
+
   $effect(() => {
-    nodesStore.set(buildNodes(glossary, selectedId))
+    nodesStore.set(layout.nodes)
   })
 
   $effect(() => {
@@ -139,7 +276,7 @@
   })
 
   const flowHeight = $derived(
-    Math.max(Math.ceil(glossary.length / COLS) * (NODE_H + GAP_Y) + GAP_Y + 100, 300)
+    Math.max(layout.totalHeight + 100, 300)
   )
 </script>
 

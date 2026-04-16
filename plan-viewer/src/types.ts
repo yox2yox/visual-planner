@@ -6,6 +6,7 @@ export interface GlossaryItem {
   name: string
   description: string
   icon?: string
+  parentId?: string
 }
 
 export interface Interaction {
