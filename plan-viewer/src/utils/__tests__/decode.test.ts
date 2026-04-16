@@ -34,6 +34,23 @@ describe('decodePlan', () => {
     expect(result.title).toBe('日本語タイトル')
   })
 
+  it('decodes standard base64 with padding', () => {
+    const plan = {
+      title: 'Padded',
+      description: 'desc',
+      glossary: [],
+    }
+    const json = JSON.stringify(plan)
+    // Standard base64 with padding, but URL-safe chars (- _)
+    const encoded = btoa(unescape(encodeURIComponent(json)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+    // Guard: confirm this fixture actually has padding
+    expect(encoded).toMatch(/=/)
+    const result = decodePlan(encoded)
+    expect(result.title).toBe('Padded')
+  })
+
   it('throws on invalid base64', () => {
     expect(() => decodePlan('!!!not-base64!!!')).toThrow()
   })

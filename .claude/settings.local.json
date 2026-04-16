@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s \"http://localhost:4173/\")",
+      "Bash(curl -s \"http://localhost:5173/\")",
+      "Bash(grep -oP '.{0,100}atob.{0,100}' dist/assets/index-DNix8GZ8.js)",
+      "Bash(npx -y playwright@latest install chromium)",
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)"
+    ]
+  }
+}

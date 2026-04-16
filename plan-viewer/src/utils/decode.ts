@@ -1,8 +1,12 @@
 import type { Plan } from '../types'
 
-// URL-safe base64 (RFC 4648): - → +, _ → /
+// Normalize base64 from URL: handle URL-safe chars and URLSearchParams quirks
+// - → +, _ → /, space → + (URLSearchParams decodes + as space), restore = padding
 function fromUrlSafeBase64(encoded: string): string {
-  return encoded.replace(/-/g, '+').replace(/_/g, '/')
+  let s = encoded.replace(/ /g, '+').replace(/-/g, '+').replace(/_/g, '/')
+  const pad = (4 - (s.length % 4)) % 4
+  s += '='.repeat(pad)
+  return s
 }
 
 export function decodePlan(encoded: string): Plan {
