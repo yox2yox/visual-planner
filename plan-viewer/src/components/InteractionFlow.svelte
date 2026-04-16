@@ -258,6 +258,8 @@
     return unsubscribe
   })
 
+  const featureGlossary = $derived(glossary.filter((g) => g.type === 'feature'))
+
   const diffEdges = $derived(
     isDiff ? computeDiffEdges(baseInteractions, interactions) : null
   )
@@ -265,14 +267,14 @@
   const nodesStore = writable<Node[]>([])
   const edgesStore = writable<Edge[]>([])
 
-  let layout = $derived(buildHierarchicalLayout(glossary, selectedId))
+  let layout = $derived(buildHierarchicalLayout(featureGlossary, selectedId))
 
   $effect(() => {
     nodesStore.set(layout.nodes)
   })
 
   $effect(() => {
-    edgesStore.set(buildEdges(glossary, interactions, diffEdges))
+    edgesStore.set(buildEdges(featureGlossary, interactions, diffEdges))
   })
 
   const flowHeight = $derived(

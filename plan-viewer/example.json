@@ -66,20 +66,17 @@
   "currentState": {
     "description": "現在はサーバーサイドセッションを使用しており、スケールアウト時にセッション共有が課題となっている。",
     "interactions": [
-      { "source": "user-auth", "target": "session", "label": "Cookie発行", "data": "SessionID" },
       { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
-      { "source": "user-auth", "target": "audit-log", "label": "ログ記録", "data": "LoginEvent" },
-      { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" }
+      { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" },
+      { "source": "user-auth", "target": "api-gateway", "label": "Cookie発行", "data": "SessionID" }
     ]
   },
   "proposedState": {
     "description": "JWTを導入することでステートレス認証を実現し、水平スケーリングを容易にする。",
     "interactions": [
-      { "source": "user-auth", "target": "jwt-token", "label": "JWT発行", "data": "AuthToken" },
       { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
-      { "source": "user-auth", "target": "audit-log", "label": "ログ記録", "data": "SecurityEvent" },
-      { "source": "api-gateway", "target": "jwt-token", "label": "トークン検証", "data": "BearerToken" },
-      { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" }
+      { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" },
+      { "source": "user-auth", "target": "api-gateway", "label": "JWT発行", "data": "AuthToken" }
     ]
   }
 }
