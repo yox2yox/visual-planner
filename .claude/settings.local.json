@@ -17,7 +17,19 @@
       "Bash(npx vitest *)",
       "Bash(npx svelte-check *)",
       "Bash(awk '/^http:\\\\/\\\\/localhost:4173/{print length\\($0\\)}' README.md)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm view *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/%40xyflow/svelte%401.5.2/packages/svelte/src/lib/container/SvelteFlow/SvelteFlow.svelte')",
+      "Bash(curl -sLI 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/container/SvelteFlow/SvelteFlow.svelte')",
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/container/SvelteFlow/SvelteFlow.svelte')",
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/container/SvelteFlow/types.ts')",
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/index.ts')",
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/CHANGELOG.md')"
     ]
   }
 }

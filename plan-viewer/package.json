@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@xyflow/svelte": "^0.1.24",
+    "@xyflow/svelte": "^1.5.2",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

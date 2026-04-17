@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
   import { SvelteFlow, Background } from '@xyflow/svelte'
   import '@xyflow/svelte/dist/style.css'
   import type { Node, Edge } from '@xyflow/svelte'
@@ -115,9 +114,9 @@
       // Push parent first so it appears before its children in the nodes array
       // (required by Svelte Flow). Style/size is finalized after children are laid out.
       // zIndex: -1 keeps the solid-background group behind the edge layer so that
-      // edges crossing the group rectangle stay visible. Svelte Flow's
-      // calculateChildXYZ clamps children to max(parentZ, childZ), so children
-      // remain at z=0 and stay in front of edges.
+      // edges crossing the group rectangle stay visible. Combined with
+      // elevateNodesOnSelect={false} on <SvelteFlow>, the group stays below edges
+      // even when selected or dragged.
       const groupNodeIndex = nodes.length
       nodes.push({
         id: treeNode.item.id,
@@ -278,8 +277,8 @@
     isDiff ? computeDiffEdges(baseInteractions, interactions) : null
   )
 
-  const nodesStore = writable<Node[]>([])
-  const edgesStore = writable<Edge[]>([])
+  let nodes = $state.raw<Node[]>([])
+  let edges = $state.raw<Edge[]>([])
 
   let layout = $derived(buildHierarchicalLayout(featureGlossary, selectedId))
 
@@ -288,11 +287,11 @@
   )
 
   $effect(() => {
-    nodesStore.set(layout.nodes)
+    nodes = layout.nodes
   })
 
   $effect(() => {
-    edgesStore.set(buildEdges(validIds, interactions, diffEdges))
+    edges = buildEdges(validIds, interactions, diffEdges)
   })
 
   const flowHeight = $derived(
@@ -301,7 +300,7 @@
 </script>
 
 <div style="height: {flowHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
-  <SvelteFlow nodes={nodesStore} edges={edgesStore} fitView>
+  <SvelteFlow bind:nodes bind:edges fitView elevateNodesOnSelect={false}>
     <Background />
   </SvelteFlow>
 </div>
