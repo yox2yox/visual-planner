@@ -90,6 +90,59 @@ describe('buildTree', () => {
     const tree = buildTree([])
     expect(tree).toHaveLength(0)
   })
+
+  describe('maxDepth', () => {
+    const fourLevels: GlossaryItem[] = [
+      { id: 'l0', type: 'feature', name: 'L0', description: '' },
+      { id: 'l1', type: 'feature', name: 'L1', description: '', parentId: 'l0' },
+      { id: 'l2', type: 'feature', name: 'L2', description: '', parentId: 'l1' },
+      { id: 'l3', type: 'feature', name: 'L3', description: '', parentId: 'l2' },
+    ]
+
+    it('defaults to 3 levels and excludes depth-3 items from flattened tree', () => {
+      const tree = buildTree(fourLevels)
+      const ids = flattenTree(tree).map((n) => n.item.id)
+      expect(ids).toEqual(['l0', 'l1', 'l2'])
+      expect(ids).not.toContain('l3')
+    })
+
+    it('truncates children of depth-2 nodes when maxDepth=3', () => {
+      const tree = buildTree(fourLevels, 3)
+      const l2 = flattenTree(tree).find((n) => n.item.id === 'l2')
+      expect(l2).toBeDefined()
+      expect(l2!.depth).toBe(2)
+      expect(l2!.children).toHaveLength(0)
+    })
+
+    it('produces only root-depth-0 nodes when maxDepth=1', () => {
+      const tree = buildTree(fourLevels, 1)
+      expect(tree.every((n) => n.children.length === 0)).toBe(true)
+      expect(tree).toHaveLength(1)
+      expect(tree[0].item.id).toBe('l0')
+    })
+
+    it('empties children of depth-1 nodes when maxDepth=2', () => {
+      const tree = buildTree(fourLevels, 2)
+      expect(tree[0].item.id).toBe('l0')
+      expect(tree[0].children).toHaveLength(1)
+      expect(tree[0].children[0].item.id).toBe('l1')
+      expect(tree[0].children[0].children).toHaveLength(0)
+    })
+
+    it('returns empty forest when maxDepth <= 0', () => {
+      expect(buildTree(fourLevels, 0)).toHaveLength(0)
+      expect(buildTree(fourLevels, -1)).toHaveLength(0)
+    })
+
+    it('terminates on circular parentId combined with maxDepth', () => {
+      const circular: GlossaryItem[] = [
+        { id: 'a', type: 'term', name: 'A', description: '', parentId: 'b' },
+        { id: 'b', type: 'term', name: 'B', description: '', parentId: 'a' },
+      ]
+      const tree = buildTree(circular, 3)
+      expect(tree.length).toBeGreaterThanOrEqual(0)
+    })
+  })
 })
 
 describe('flattenTree', () => {

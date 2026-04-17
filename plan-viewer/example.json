@@ -1,6 +1,6 @@
 {
   "title": "認証システム刷新プラン",
-  "description": "セッションベースからJWT認証への移行により、スケーラビリティとセキュリティを向上させる。",
+  "description": "セッションベースからJWT認証への移行により、スケーラビリティとセキュリティを向上させる。フロントエンド／バックエンド間の相互接続を整理し、認証モジュール内部の責務分割（Validator / Issuer）を可視化する。",
   "glossary": [
     {
       "id": "backend",
@@ -18,6 +18,22 @@
       "parentId": "backend"
     },
     {
+      "id": "auth-validator",
+      "type": "feature",
+      "name": "資格情報検証",
+      "description": "パスワードハッシュの照合など、クレデンシャルの検証を専任で行うサブモジュール（3階層目の表示例）",
+      "icon": "✅",
+      "parentId": "user-auth"
+    },
+    {
+      "id": "token-issuer",
+      "type": "feature",
+      "name": "トークン発行",
+      "description": "検証済みユーザーに対して JWT を発行するサブモジュール（3階層目の表示例）",
+      "icon": "🎟️",
+      "parentId": "user-auth"
+    },
+    {
       "id": "user-service",
       "type": "feature",
       "name": "ユーザーサービス",
@@ -31,6 +47,37 @@
       "description": "外部からのリクエストを受け付け、内部サービスにルーティングする",
       "icon": "🌐",
       "parentId": "backend"
+    },
+    {
+      "id": "frontend",
+      "type": "feature",
+      "name": "フロントエンド",
+      "description": "ブラウザ上で動作するユーザー向けアプリケーション",
+      "icon": "💻"
+    },
+    {
+      "id": "login-page",
+      "type": "feature",
+      "name": "ログインページ",
+      "description": "ユーザーが資格情報を入力する画面",
+      "icon": "🔑",
+      "parentId": "frontend"
+    },
+    {
+      "id": "dashboard",
+      "type": "feature",
+      "name": "ダッシュボード",
+      "description": "ログイン後のトップ画面。各種APIを呼び出して情報を表示する",
+      "icon": "📊",
+      "parentId": "frontend"
+    },
+    {
+      "id": "http-client",
+      "type": "feature",
+      "name": "HTTPクライアント",
+      "description": "バックエンドへのリクエスト送受信を統括するSDK層",
+      "icon": "📡",
+      "parentId": "frontend"
     },
     {
       "id": "data-layer",
@@ -64,19 +111,30 @@
     }
   ],
   "currentState": {
-    "description": "現在はサーバーサイドセッションを使用しており、スケールアウト時にセッション共有が課題となっている。",
+    "description": "現在はサーバーサイドセッションを使用。フロントエンドはCookie経由でセッションIDをやり取りし、バックエンドがセッションストアを参照する。スケールアウト時にセッション共有が課題。",
     "interactions": [
-      { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
+      { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
+      { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
+      { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
       { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" },
-      { "source": "user-auth", "target": "api-gateway", "label": "Cookie発行", "data": "SessionID" }
+      { "source": "user-auth", "target": "api-gateway", "label": "セッション発行", "data": "SessionID" },
+      { "source": "api-gateway", "target": "http-client", "label": "Cookie設定", "data": "SessionID" },
+      { "source": "http-client", "target": "dashboard", "label": "ログイン完了", "data": "SessionID" },
+      { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Cookie" }
     ]
   },
   "proposedState": {
-    "description": "JWTを導入することでステートレス認証を実現し、水平スケーリングを容易にする。",
+    "description": "JWTを導入してステートレス認証を実現。認証モジュール内に Validator と Issuer を分離し、責務を明確化。フロントエンドはJWTをヘッダで送出する。",
     "interactions": [
-      { "source": "api-gateway", "target": "user-auth", "label": "認証要求", "data": "Credentials" },
+      { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
+      { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
+      { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
       { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" },
-      { "source": "user-auth", "target": "api-gateway", "label": "JWT発行", "data": "AuthToken" }
+      { "source": "user-auth", "target": "token-issuer", "label": "発行要求", "data": "UserID" },
+      { "source": "user-auth", "target": "api-gateway", "label": "JWT返却", "data": "AuthToken" },
+      { "source": "api-gateway", "target": "http-client", "label": "JWT配信", "data": "AuthToken" },
+      { "source": "http-client", "target": "dashboard", "label": "ログイン完了", "data": "AuthToken" },
+      { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Authorization: Bearer" }
     ]
   }
 }

@@ -12,7 +12,12 @@
       "Bash(npm install *)",
       "Bash(npm uninstall *)",
       "Bash(ls *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "WebFetch(domain:svelteflow.dev)",
+      "Bash(npx vitest *)",
+      "Bash(npx svelte-check *)",
+      "Bash(awk '/^http:\\\\/\\\\/localhost:4173/{print length\\($0\\)}' README.md)",
+      "Bash(git add *)"
     ]
   }
 }

@@ -6,8 +6,16 @@ export interface TreeNode {
   depth: number
 }
 
-/** Build a forest (list of root trees) from flat glossary items */
-export function buildTree(items: GlossaryItem[]): TreeNode[] {
+export const DEFAULT_MAX_DEPTH = 3
+
+/**
+ * Build a forest (list of root trees) from flat glossary items.
+ *
+ * @param maxDepth Maximum number of levels to retain (1-indexed; root = level 1).
+ *   Nodes at depths >= maxDepth are dropped; nodes at depth = maxDepth - 1
+ *   have `.children` truncated to `[]`. Defaults to 3.
+ */
+export function buildTree(items: GlossaryItem[], maxDepth: number = DEFAULT_MAX_DEPTH): TreeNode[] {
   const itemMap = new Map<string, GlossaryItem>(items.map((i) => [i.id, i]))
   const childrenMap = new Map<string, GlossaryItem[]>()
 
@@ -19,6 +27,7 @@ export function buildTree(items: GlossaryItem[]): TreeNode[] {
   }
 
   function build(parentId: string, depth: number, visited: Set<string>): TreeNode[] {
+    if (depth >= maxDepth) return []
     const children = childrenMap.get(parentId) ?? []
     return children
       .filter((item) => !visited.has(item.id))
@@ -32,6 +41,8 @@ export function buildTree(items: GlossaryItem[]): TreeNode[] {
         }
       })
   }
+
+  if (maxDepth <= 0) return []
 
   // Root nodes: parentId is undefined OR parentId references a non-existent item
   const roots: TreeNode[] = []

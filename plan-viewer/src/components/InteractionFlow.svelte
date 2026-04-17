@@ -5,8 +5,10 @@
   import type { Node, Edge } from '@xyflow/svelte'
   import type { GlossaryItem, Interaction, DiffEdge } from '../types'
   import { computeDiffEdges } from '../utils/diff'
-  import { buildTree, type TreeNode } from '../utils/filter'
+  import { buildTree, flattenTree, type TreeNode } from '../utils/filter'
   import { selectedGlossaryId } from '../stores'
+
+  const MAX_DEPTH = 3
 
   interface Props {
     glossary: GlossaryItem[]
@@ -68,54 +70,81 @@
   interface LayoutResult {
     nodes: Node[]
     totalHeight: number
+    tree: TreeNode[]
+  }
+
+  function groupNodeStyle(item: GlossaryItem, width: number, height: number, isSelected: boolean): string {
+    return [
+      `background: ${groupBgColors[item.type] ?? '#f9fafb'};`,
+      `border: 2px dashed ${typeBorderColors[item.type] ?? '#9ca3af'};`,
+      'border-radius: 12px;',
+      'padding: 12px 16px;',
+      'font-size: 14px;',
+      'font-weight: 700;',
+      `width: ${width}px;`,
+      `height: ${height}px;`,
+      isSelected ? 'box-shadow: 0 0 0 3px #3b82f6;' : '',
+    ].join(' ')
   }
 
   function buildHierarchicalLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
-    const tree = buildTree(items)
+    const tree = buildTree(items, MAX_DEPTH)
     const nodes: Node[] = []
-    let currentY = 0
 
-    function layoutGroup(treeNode: TreeNode, offsetX: number, offsetY: number): { width: number; height: number } {
+    // Lay out a subtree rooted at `treeNode`. Returns the outer box size.
+    // The parent node is pushed with its own position (relative to its parent, or
+    // absolute for roots); children are pushed AFTER the parent with positions
+    // relative to `treeNode` itself so Svelte Flow's parentId system computes
+    // their absolute positions correctly.
+    function layoutSubtree(treeNode: TreeNode, position: { x: number; y: number }, parentId?: string): { width: number; height: number } {
       const children = treeNode.children
-      const leafChildren = children.filter((c) => c.children.length === 0)
-      const groupChildren = children.filter((c) => c.children.length > 0)
+      const isLeaf = children.length === 0
+      const isSelected = selectedId === treeNode.item.id
 
-      if (children.length === 0) {
-        // Leaf node — push it as a regular node
+      if (isLeaf) {
         nodes.push({
           id: treeNode.item.id,
-          position: { x: offsetX, y: offsetY },
+          position,
           data: { label: makeNodeLabel(treeNode.item) },
-          style: makeNodeStyle(treeNode.item, selectedId === treeNode.item.id),
+          style: makeNodeStyle(treeNode.item, isSelected),
+          ...(parentId ? { parentId } : {}),
         })
         return { width: NODE_W, height: NODE_H }
       }
 
-      // This node has children — push group background placeholder first (z-order: behind children)
+      // Push parent first so it appears before its children in the nodes array
+      // (required by Svelte Flow). Style/size is finalized after children are laid out.
+      // zIndex: -1 keeps the solid-background group behind the edge layer so that
+      // edges crossing the group rectangle stay visible. Svelte Flow's
+      // calculateChildXYZ clamps children to max(parentZ, childZ), so children
+      // remain at z=0 and stay in front of edges.
       const groupNodeIndex = nodes.length
       nodes.push({
         id: treeNode.item.id,
-        position: { x: offsetX, y: offsetY },
+        position,
         data: { label: makeNodeLabel(treeNode.item) },
-        style: '', // will be updated after size is computed
+        style: '',
+        zIndex: -1,
+        ...(parentId ? { parentId } : {}),
       })
+
+      const leafChildren = children.filter((c) => c.children.length === 0)
+      const groupChildren = children.filter((c) => c.children.length > 0)
 
       let innerY = GROUP_HEADER + GROUP_PAD_Y
 
-      // Layout leaf children in grid inside this group
+      // Leaf children: laid out in a grid, positions relative to this group
       for (let i = 0; i < leafChildren.length; i++) {
         const col = i % COLS_IN_GROUP
         const row = Math.floor(i / COLS_IN_GROUP)
-        const child = leafChildren[i]
-        nodes.push({
-          id: child.item.id,
-          position: {
-            x: offsetX + GROUP_PAD_X + col * (NODE_W + GAP_X),
-            y: offsetY + innerY + row * (NODE_H + GAP_Y),
+        layoutSubtree(
+          leafChildren[i],
+          {
+            x: GROUP_PAD_X + col * (NODE_W + GAP_X),
+            y: innerY + row * (NODE_H + GAP_Y),
           },
-          data: { label: makeNodeLabel(child.item) },
-          style: makeNodeStyle(child.item, selectedId === child.item.id),
-        })
+          treeNode.item.id
+        )
       }
 
       const leafCols = Math.min(leafChildren.length, COLS_IN_GROUP)
@@ -123,10 +152,14 @@
       const leafBlockHeight = leafRows > 0 ? leafRows * (NODE_H + GAP_Y) : 0
       let subGroupY = innerY + leafBlockHeight
 
-      // Layout sub-groups below leaf children
+      // Sub-groups: stacked vertically below leaves, positions relative to this group
       let maxSubGroupWidth = 0
       for (const subGroup of groupChildren) {
-        const sub = layoutGroup(subGroup, offsetX + GROUP_PAD_X, offsetY + subGroupY)
+        const sub = layoutSubtree(
+          subGroup,
+          { x: GROUP_PAD_X, y: subGroupY },
+          treeNode.item.id
+        )
         subGroupY += sub.height + GAP_Y
         maxSubGroupWidth = Math.max(maxSubGroupWidth, sub.width)
       }
@@ -139,59 +172,40 @@
       const groupWidth = contentWidth + GROUP_PAD_X * 2
       const groupHeight = subGroupY + GROUP_PAD_Y
 
-      // Update group background node with computed size
       nodes[groupNodeIndex] = {
-        id: treeNode.item.id,
-        position: { x: offsetX, y: offsetY },
-        data: { label: makeNodeLabel(treeNode.item) },
-        style: [
-          `background: ${groupBgColors[treeNode.item.type] ?? '#f9fafb'};`,
-          `border: 2px dashed ${typeBorderColors[treeNode.item.type] ?? '#9ca3af'};`,
-          'border-radius: 12px;',
-          'padding: 12px 16px;',
-          'font-size: 14px;',
-          'font-weight: 700;',
-          `width: ${groupWidth}px;`,
-          `height: ${groupHeight}px;`,
-          selectedId === treeNode.item.id ? 'box-shadow: 0 0 0 3px #3b82f6;' : '',
-        ].join(' '),
+        ...nodes[groupNodeIndex],
+        style: groupNodeStyle(treeNode.item, groupWidth, groupHeight, isSelected),
       }
 
       return { width: groupWidth, height: groupHeight }
     }
 
-    // Layout root-level nodes
     const rootLeaves = tree.filter((n) => n.children.length === 0)
     const rootGroups = tree.filter((n) => n.children.length > 0)
 
-    // Place root groups vertically
     let yOffset = 0
+
+    // Root groups — absolute coordinates, stacked vertically
     for (const group of rootGroups) {
-      const result = layoutGroup(group, 0, yOffset)
+      const result = layoutSubtree(group, { x: 0, y: yOffset })
       yOffset += result.height + GROUP_GAP
     }
 
-    // Place root leaf nodes below groups in a grid
+    // Root leaves — absolute coordinates, grid below groups
+    for (let i = 0; i < rootLeaves.length; i++) {
+      const col = i % COLS_IN_GROUP
+      const row = Math.floor(i / COLS_IN_GROUP)
+      layoutSubtree(rootLeaves[i], {
+        x: col * (NODE_W + GAP_X),
+        y: yOffset + row * (NODE_H + GAP_Y),
+      })
+    }
     if (rootLeaves.length > 0) {
-      for (let i = 0; i < rootLeaves.length; i++) {
-        const col = i % COLS_IN_GROUP
-        const row = Math.floor(i / COLS_IN_GROUP)
-        const leaf = rootLeaves[i]
-        nodes.push({
-          id: leaf.item.id,
-          position: {
-            x: col * (NODE_W + GAP_X),
-            y: yOffset + row * (NODE_H + GAP_Y),
-          },
-          data: { label: makeNodeLabel(leaf.item) },
-          style: makeNodeStyle(leaf.item, selectedId === leaf.item.id),
-        })
-      }
       const leafRows = Math.ceil(rootLeaves.length / COLS_IN_GROUP)
       yOffset += leafRows * (NODE_H + GAP_Y)
     }
 
-    return { nodes, totalHeight: yOffset }
+    return { nodes, totalHeight: yOffset, tree }
   }
 
   function edgeStyle(status: DiffEdge['status']): string {
@@ -208,11 +222,11 @@
   }
 
   function buildEdges(
-    items: GlossaryItem[],
+    validIds: Set<string>,
     rawInteractions: Interaction[],
     diffEdges: DiffEdge[] | null
   ): Edge[] {
-    const ids = new Set(items.map((i) => i.id))
+    const ids = validIds
 
     if (diffEdges) {
       return diffEdges
@@ -269,12 +283,16 @@
 
   let layout = $derived(buildHierarchicalLayout(featureGlossary, selectedId))
 
+  const validIds = $derived(
+    new Set(flattenTree(layout.tree).map((n) => n.item.id))
+  )
+
   $effect(() => {
     nodesStore.set(layout.nodes)
   })
 
   $effect(() => {
-    edgesStore.set(buildEdges(featureGlossary, interactions, diffEdges))
+    edgesStore.set(buildEdges(validIds, interactions, diffEdges))
   })
 
   const flowHeight = $derived(
@@ -287,3 +305,13 @@
     <Background />
   </SvelteFlow>
 </div>
+
+<style>
+  /* Break the stacking context that Svelte Flow sets on .svelte-flow__nodes
+     (style.css sets z-index: 0). Without this, individual nodes with negative
+     zIndex cannot render behind the edges layer; group nodes would always
+     cover the edges crossing them. */
+  :global(.svelte-flow__nodes) {
+    z-index: auto !important;
+  }
+</style>
