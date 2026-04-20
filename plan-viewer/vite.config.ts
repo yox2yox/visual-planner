@@ -4,6 +4,10 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 export default defineConfig({
   base: './',
   plugins: [svelte()],
+  build: {
+    outDir: '../skill/visual-planner/viewer',
+    emptyOutDir: true,
+  },
   test: {
     environment: 'node',
   },
