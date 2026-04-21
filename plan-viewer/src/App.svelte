@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { decodePlan } from './utils/decode'
   import { normalizePlan } from './utils/normalize'
   import type { Plan, StatePair } from './types'
   import Header from './components/Header.svelte'
@@ -13,13 +12,22 @@
   }
 
   function loadPlan(): LoadResult {
-    const params = new URLSearchParams(window.location.search)
-    const encoded = params.get('plan')
-    if (!encoded) {
-      return { plan: null, pairs: [], error: 'URLクエリパラメータ ?plan= が指定されていません。' }
+    const el = document.getElementById('plan-data')
+    const text = el?.textContent?.trim() ?? ''
+    if (!text) {
+      return {
+        plan: null,
+        pairs: [],
+        error:
+          'プランデータが埋め込まれていません。generator スクリプトで HTML を再生成してください。',
+      }
     }
     try {
-      const plan = decodePlan(encoded)
+      const parsed = JSON.parse(text) as unknown
+      if (typeof parsed !== 'object' || parsed === null) {
+        throw new Error('Invalid plan JSON: expected an object')
+      }
+      const plan = parsed as Plan
       const normalized = normalizePlan(plan)
       return { plan, pairs: normalized.pairs, error: null }
     } catch (e) {

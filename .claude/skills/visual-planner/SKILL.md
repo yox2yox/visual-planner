@@ -1,13 +1,13 @@
 ---
 name: visual-planner
-description: Generate a plan-viewer JSON (glossary + currentState/proposedState), URL-safe base64 encode it, and produce a file:// URL to the bundled plan-viewer so the user can open it in a browser without running any server. Use this whenever the user asks to visualize an implementation plan, architecture change, before/after design, or data-flow diagram for a feature.
+description: Generate a plan-viewer JSON and a self-contained HTML file (with the plan JSON inlined) so the user can open the plan diagram in any browser — no URL, no server, no network. Use this whenever the user asks to visualize an implementation plan, architecture change, before/after design, or data-flow diagram for a feature.
 ---
 
 # visual-planner
 
-Turn a feature idea or migration plan into a **clickable `file://` URL** that opens in the user's browser and renders an interactive plan diagram — no server, no install, no network.
+Turn a feature idea or migration plan into **two files**: a `plan.json` and a self-contained `plan.html` (the plan-viewer bundle with the JSON inlined). The user opens the HTML file in any browser — no server, no install, no network, no long URL.
 
-Rendering is done by the pre-built `viewer/` bundle that ships with this skill.
+Rendering is done by the pre-built `viewer/` bundle that ships with this skill; the generator script just embeds the plan JSON into a `<script id="plan-data" type="application/json">…</script>` placeholder baked into that HTML.
 
 ## When to use
 
@@ -16,7 +16,7 @@ Trigger this skill when the user asks to:
 - visualize an implementation plan, proposal, or refactor
 - diagram a current-vs-proposed architecture
 - show the data flow between components for a feature
-- produce a "plan viewer URL" / "share this plan as a URL"
+- produce a "plan viewer" / "share this plan as a file"
 
 Not for: generating code, writing docs, or anything that doesn't boil down to producing the plan JSON.
 
@@ -41,32 +41,37 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
    - every `interactions[].source` / `.target` references an existing `id`
    - `type` is one of `term` | `feature` | `data`
    - `pairs` and top-level `currentState`/`proposedState` are mutually exclusive — pick one form
-3. **Encode and build the URL** by piping the JSON into the helper script:
+3. **Generate the files** by piping the JSON (or passing a path) into the helper script, along with an output basename:
    ```bash
-   node <skill-dir>/scripts/make_url.mjs path/to/plan.json
+   node <skill-dir>/scripts/make_plan.mjs path/to/plan.json /abs/path/to/output-basename
    ```
    or via stdin:
    ```bash
-   echo "$PLAN_JSON" | node <skill-dir>/scripts/make_url.mjs -
+   echo "$PLAN_JSON" | node <skill-dir>/scripts/make_plan.mjs - /abs/path/to/output-basename
    ```
-   The script validates the plan (types, unique ids, parentId/interaction references), URL-safe base64-encodes the JSON, and prints a single `file:///.../viewer/index.html?plan=<...>` URL. Requires Node.js — already a dependency of this repo, no install step needed.
-4. **Hand the URL to the user**. They can paste it into any browser; `file://` works without `npm install` or any dev server. Mention that the link embeds the plan itself (no file on disk is required after generation).
+   The script validates the plan (types, unique ids, parentId/interaction references), then writes:
+   - `<output-basename>.json` — the validated plan, pretty-printed
+   - `<output-basename>.html` — a copy of the viewer bundle with the plan JSON safely escaped and inlined into `<script id="plan-data" type="application/json">…</script>`
+   Both absolute paths are printed to stdout (one per line). Requires Node.js — already a dependency of this repo, no install step needed.
+4. **Hand the file paths to the user**. They can open the `.html` directly in any browser (`file://` works without `npm install` or any dev server). Mention that the HTML is self-contained — the sibling `.json` is there for re-editing, not for the viewer to load at runtime.
 
 ## Output style
 
 - Be brief in prose. The plan is the payload.
-- When returning the URL, put it on its own line so terminals can linkify it.
-- If the URL is very long (plans over ~8 KB of JSON), warn the user and suggest trimming descriptions.
+- When returning the paths, put each on its own line so terminals can linkify them.
+- If the HTML is large (plans over ~1 MB), warn the user and suggest trimming descriptions.
 
 ## Editing an existing plan
 
-- If the user provides an existing plan URL, base64-decode the `?plan=` parameter (URL-safe base64, may lack padding — re-add `=` until length is a multiple of 4), modify the JSON, then re-run `make_url.mjs`.
+- If the user provides an existing plan `.json` file, edit it directly and re-run `make_plan.mjs` with the same output basename to regenerate the HTML.
+- If the user only has an HTML file from a previous run, extract the JSON from its `<script id="plan-data" type="application/json">…</script>` block (it is plain JSON with `<` escaped as `<`; `JSON.parse` handles that natively), then re-run the generator.
 
 ## Failure modes & fixes
 
 - `viewer/index.html not found`: the bundle is missing. Ask the user to run `npm run build` inside `plan-viewer/`. The skill repo should ship with `viewer/` pre-built; this error means it was deleted or the repo is in an unusual state.
+- `viewer HTML does not contain <script id="plan-data">…</script>`: the bundled HTML was built from an older source that lacks the placeholder. Rebuild with `npm run build` inside `plan-viewer/` — `plan-viewer/index.html` declares the placeholder and `viteSingleFile` preserves it.
 - Invalid plan JSON: the script prints the specific validation error to stderr. Fix the plan and retry.
-- URL too long for some tools: the browser itself handles long `file://` URLs fine, but copy-paste through chat apps can mangle them. Save the URL to a `.url` file or pass it directly.
+- HTML file is much larger than expected: the viewer bundle is ~250 KB on its own; plans that push well past that usually mean a descriptions are unnecessarily long. Trim them.
 
 ## Schema quick reference
 

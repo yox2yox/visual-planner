@@ -1,15 +1,18 @@
 #!/usr/bin/env node
-// Build a file:// URL that opens plan-viewer with an embedded plan JSON.
+// Build a self-contained plan-viewer HTML (with the plan JSON inlined) and
+// a sibling .json file, from an input plan JSON.
 //
 // Usage:
-//   node make_url.mjs path/to/plan.json
-//   node make_url.mjs -                 # read from stdin
-//   cat plan.json | node make_url.mjs -
+//   node make_plan.mjs path/to/plan.json /abs/out/basename
+//   cat plan.json | node make_plan.mjs - /abs/out/basename
 //
-// Stdout: a single line `file:///.../viewer/index.html?plan=<base64url>`.
+// Writes:
+//   <basename>.json  — the validated plan JSON (pretty-printed)
+//   <basename>.html  — a copy of viewer/index.html with the plan JSON inlined
+//                      into `<script id="plan-data" type="application/json">…</script>`
 
-import { readFileSync, existsSync } from 'node:fs'
-import { pathToFileURL, fileURLToPath } from 'node:url'
+import { readFileSync, existsSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const VALID_TYPES = new Set(['term', 'feature', 'data'])
@@ -91,13 +94,27 @@ export function validate(plan) {
   }
 }
 
-export function encodePlan(plan) {
-  const json = JSON.stringify(plan)
-  return Buffer.from(json, 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '')
+// Escape a JSON string for safe inlining inside <script type="application/json">.
+// Breaking "</" prevents an HTML parser from terminating the script element early
+// if the plan contains the literal "</script>". U+2028/U+2029 are also escaped as
+// defense-in-depth for anything that later re-interprets the text as JS.
+export function escapeForScriptTag(json) {
+  return json
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+}
+
+export function embedPlan(viewerHtml, plan) {
+  const inline = escapeForScriptTag(JSON.stringify(plan))
+  const re = /(<script id="plan-data" type="application\/json">)([\s\S]*?)(<\/script>)/
+  if (!re.test(viewerHtml)) {
+    throw new Error(
+      'viewer HTML does not contain <script id="plan-data" type="application/json">…</script>. ' +
+        'Rebuild plan-viewer (npm run build) after adding the placeholder to plan-viewer/index.html.',
+    )
+  }
+  return viewerHtml.replace(re, `$1${inline}$3`)
 }
 
 function viewerIndexPath() {
@@ -105,14 +122,14 @@ function viewerIndexPath() {
   return resolve(here, '..', 'viewer', 'index.html')
 }
 
-function buildUrl(encoded) {
+function readViewerHtml() {
   const idx = viewerIndexPath()
   if (!existsSync(idx)) {
     throw new Error(
       `viewer/index.html not found at ${idx}. Run \`npm run build\` in plan-viewer/ to regenerate it.`,
     )
   }
-  return `${pathToFileURL(idx).href}?plan=${encoded}`
+  return readFileSync(idx, 'utf8')
 }
 
 async function readStdin() {
@@ -128,16 +145,27 @@ async function loadPlan(src) {
 
 async function main() {
   const args = process.argv.slice(2)
-  if (args.length !== 1) {
+  if (args.length !== 2) {
     process.stderr.write(
-      'Usage: node make_url.mjs <path-to-plan.json>\n' +
-        '       node make_url.mjs -            # read JSON from stdin\n',
+      'Usage: node make_plan.mjs <path-to-plan.json> <output-basename>\n' +
+        '       node make_plan.mjs -              <output-basename>   # read JSON from stdin\n' +
+        'Writes <output-basename>.html and <output-basename>.json.\n',
     )
     process.exit(2)
   }
-  const plan = await loadPlan(args[0])
+  const [input, basename] = args
+  const plan = await loadPlan(input)
   validate(plan)
-  process.stdout.write(buildUrl(encodePlan(plan)) + '\n')
+
+  const viewerHtml = readViewerHtml()
+  const html = embedPlan(viewerHtml, plan)
+
+  const outBase = resolve(basename)
+  const htmlPath = `${outBase}.html`
+  const jsonPath = `${outBase}.json`
+  writeFileSync(htmlPath, html, 'utf8')
+  writeFileSync(jsonPath, JSON.stringify(plan, null, 2) + '\n', 'utf8')
+  process.stdout.write(`${htmlPath}\n${jsonPath}\n`)
 }
 
 const isCliEntry = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
