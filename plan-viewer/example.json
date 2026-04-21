@@ -1,6 +1,6 @@
 {
   "title": "認証システム刷新プラン",
-  "description": "セッションベースからJWT認証への移行により、スケーラビリティとセキュリティを向上させる。フロントエンド／バックエンド間の相互接続を整理し、認証モジュール内部の責務分割（Validator / Issuer）を可視化する。",
+  "description": "セッションベースからJWT認証への移行。複雑なフロー全体を「ログイン」「API 呼び出し」の2ペアに分割して表示することで、各ダイアグラムを読みやすく保つ。",
   "glossary": [
     {
       "id": "backend",
@@ -47,6 +47,14 @@
       "description": "外部からのリクエストを受け付け、内部サービスにルーティングする",
       "icon": "🌐",
       "parentId": "backend"
+    },
+    {
+      "id": "token-verifier",
+      "type": "feature",
+      "name": "トークン検証",
+      "description": "受信リクエストに付与された認証トークンを検証する",
+      "icon": "🔎",
+      "parentId": "api-gateway"
     },
     {
       "id": "frontend",
@@ -101,40 +109,55 @@
       "description": "クライアントサイドで保持するJSONウェブトークン",
       "icon": "🎫",
       "parentId": "data-layer"
-    },
-    {
-      "id": "audit-log",
-      "type": "term",
-      "name": "監査ログ",
-      "description": "セキュリティイベントや認証試行を記録するログストレージ",
-      "icon": "📋"
     }
   ],
-  "currentState": {
-    "description": "現在はサーバーサイドセッションを使用。フロントエンドはCookie経由でセッションIDをやり取りし、バックエンドがセッションストアを参照する。スケールアウト時にセッション共有が課題。",
-    "interactions": [
-      { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
-      { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
-      { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
-      { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" },
-      { "source": "user-auth", "target": "api-gateway", "label": "セッション発行", "data": "SessionID" },
-      { "source": "api-gateway", "target": "http-client", "label": "Cookie設定", "data": "SessionID" },
-      { "source": "http-client", "target": "dashboard", "label": "ログイン完了", "data": "SessionID" },
-      { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Cookie" }
-    ]
-  },
-  "proposedState": {
-    "description": "JWTを導入してステートレス認証を実現。認証モジュール内に Validator と Issuer を分離し、責務を明確化。フロントエンドはJWTをヘッダで送出する。",
-    "interactions": [
-      { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
-      { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
-      { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
-      { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" },
-      { "source": "user-auth", "target": "token-issuer", "label": "発行要求", "data": "UserID" },
-      { "source": "user-auth", "target": "api-gateway", "label": "JWT返却", "data": "AuthToken" },
-      { "source": "api-gateway", "target": "http-client", "label": "JWT配信", "data": "AuthToken" },
-      { "source": "http-client", "target": "dashboard", "label": "ログイン完了", "data": "AuthToken" },
-      { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Authorization: Bearer" }
-    ]
-  }
+  "pairs": [
+    {
+      "title": "ログインフロー",
+      "description": "資格情報を検証し、認証トークンを発行してクライアントへ配信するまで。",
+      "currentState": {
+        "description": "サーバーサイドセッションを使用。Cookie 経由でセッション ID を配布する。",
+        "interactions": [
+          { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
+          { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
+          { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
+          { "source": "user-auth", "target": "user-service", "label": "ユーザー取得", "data": "UserID" },
+          { "source": "user-auth", "target": "api-gateway", "label": "セッション発行", "data": "SessionID" },
+          { "source": "api-gateway", "target": "http-client", "label": "Cookie設定", "data": "SessionID" }
+        ]
+      },
+      "proposedState": {
+        "description": "JWT 発行に変更。認証モジュール内に Validator / Issuer を分離。",
+        "interactions": [
+          { "source": "login-page", "target": "api-gateway", "label": "ログイン要求", "data": "Credentials" },
+          { "source": "api-gateway", "target": "user-auth", "label": "認証委譲", "data": "Credentials" },
+          { "source": "user-auth", "target": "auth-validator", "label": "資格検証", "data": "Credentials" },
+          { "source": "user-auth", "target": "user-service", "label": "ユーザー検索", "data": "Email" },
+          { "source": "user-auth", "target": "token-issuer", "label": "発行要求", "data": "UserID" },
+          { "source": "user-auth", "target": "api-gateway", "label": "JWT返却", "data": "AuthToken" },
+          { "source": "api-gateway", "target": "http-client", "label": "JWT配信", "data": "AuthToken" }
+        ]
+      }
+    },
+    {
+      "title": "認証済み API 呼び出し",
+      "description": "ログイン後にダッシュボードが API を呼び出すときの認証ヘッダ。",
+      "currentState": {
+        "description": "ブラウザが自動送信する Cookie でサーバーがセッションを参照する。",
+        "interactions": [
+          { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Cookie" },
+          { "source": "api-gateway", "target": "session", "label": "セッション参照", "data": "SessionID" },
+          { "source": "api-gateway", "target": "user-service", "label": "データ取得", "data": "UserID" }
+        ]
+      },
+      "proposedState": {
+        "description": "Authorization ヘッダに JWT を載せて送信し、ゲートウェイが署名検証する。",
+        "interactions": [
+          { "source": "dashboard", "target": "api-gateway", "label": "API呼び出し", "data": "Authorization: Bearer" },
+          { "source": "api-gateway", "target": "token-verifier", "label": "署名検証", "data": "AuthToken" },
+          { "source": "api-gateway", "target": "user-service", "label": "データ取得", "data": "UserID" }
+        ]
+      }
+    }
+  ]
 }

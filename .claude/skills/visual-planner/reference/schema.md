@@ -9,12 +9,24 @@ Reference for the JSON payload consumed by the `viewer/` bundle via the `?plan=<
   "title": "string — shown as the page heading",
   "description": "string — one-paragraph summary shown below the title",
   "glossary": [ /* GlossaryItem[] — required, at least one */ ],
+
+  // Pick ONE of the following state layouts (never both):
+
+  // A) Multi-pair (preferred when the plan is non-trivial — see "Pair vs. top-level" below)
+  "pairs": [ /* StatePair[] — non-empty when present */ ],
+
+  // B) Legacy single-pair shortcut (kept for backwards compatibility)
   "currentState":  { /* State — optional. Omit if there is no 'before' */ },
   "proposedState": { /* State — optional. Omit if there is no 'after'  */ }
 }
 ```
 
-At least one of `currentState` / `proposedState` should be present; if both are omitted the viewer only shows the glossary.
+Viewer behaviour:
+- If `pairs` is present, it is used. Pairs with neither `currentState` nor `proposedState` are silently dropped.
+- Otherwise, if `currentState` and/or `proposedState` are present, they are wrapped into a single untitled pair.
+- If neither is present, only the glossary is rendered.
+
+Defining `pairs` together with top-level `currentState`/`proposedState` is a validation error.
 
 ## GlossaryItem
 
@@ -41,6 +53,29 @@ At least one of `currentState` / `proposedState` should be present; if both are 
 - Depth 1 (root) → Depth 2 → Depth 3 is rendered. Depth 4+ nodes are dropped from the view.
 - Cycles in `parentId` are not allowed.
 
+## StatePair
+
+```jsonc
+{
+  "title":         "string — shown as the pair's section header. Required field; empty string '' is allowed and hides the header",
+  "description":   "string — optional paragraph shown under the title",
+  "currentState":  { /* State — optional */ },
+  "proposedState": { /* State — optional */ }
+}
+```
+
+A pair with both `currentState` and `proposedState` omitted is dropped from the rendered output (the pair contributes nothing visible).
+
+### Pair vs. top-level (when to split)
+
+Prefer `pairs` when any of the following apply:
+
+- a single state contains more than ~10 interactions, or
+- a single state touches more than ~10 glossary nodes, or
+- the plan covers multiple independent flows (e.g. login, API call, logout) that make sense on their own diagrams.
+
+Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting keeps the diagrams readable; cramming everything into one pair (or the legacy top-level form) makes them hard to follow once the plan grows.
+
 ## State
 
 ```jsonc
@@ -63,7 +98,7 @@ At least one of `currentState` / `proposedState` should be present; if both are 
 
 Both `source` and `target` must exist in `glossary[]`.
 
-## Minimal example
+## Minimal example (single pair, legacy form)
 
 ```json
 {
@@ -79,6 +114,45 @@ Both `source` and `target` must exist in `glossary[]`.
       { "source": "client", "target": "server", "label": "HTTP GET", "data": "Request" }
     ]
   }
+}
+```
+
+## Multi-pair example
+
+```json
+{
+  "title": "Hello plan",
+  "description": "Two independent flows.",
+  "glossary": [
+    { "id": "client", "type": "feature", "name": "Client" },
+    { "id": "server", "type": "feature", "name": "Server" },
+    { "id": "db", "type": "data", "name": "DB" }
+  ],
+  "pairs": [
+    {
+      "title": "Read",
+      "proposedState": {
+        "interactions": [
+          { "source": "client", "target": "server", "label": "GET /item", "data": "ItemID" },
+          { "source": "server", "target": "db", "label": "SELECT", "data": "ItemID" }
+        ]
+      }
+    },
+    {
+      "title": "Write",
+      "currentState": {
+        "interactions": [
+          { "source": "client", "target": "server", "label": "POST /item", "data": "ItemBody" }
+        ]
+      },
+      "proposedState": {
+        "interactions": [
+          { "source": "client", "target": "server", "label": "PUT /item", "data": "ItemBody" },
+          { "source": "server", "target": "db", "label": "UPSERT", "data": "ItemRow" }
+        ]
+      }
+    }
+  ]
 }
 ```
 

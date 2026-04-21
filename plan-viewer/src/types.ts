@@ -21,12 +21,20 @@ export interface FlowState {
   interactions: Interaction[]
 }
 
+export interface StatePair {
+  title: string
+  description?: string
+  currentState?: FlowState
+  proposedState?: FlowState
+}
+
 export interface Plan {
   title: string
   description: string
   glossary: GlossaryItem[]
   currentState?: FlowState
   proposedState?: FlowState
+  pairs?: StatePair[]
 }
 
 export type EdgeDiffStatus = 'added' | 'changed' | 'removed' | 'unchanged'

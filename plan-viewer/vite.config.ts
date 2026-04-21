@@ -11,5 +11,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    include: [
+      'src/**/*.{test,spec}.{js,ts,mjs}',
+      '../.claude/skills/visual-planner/scripts/__tests__/**/*.{test,spec}.{js,ts,mjs}',
+    ],
   },
 })

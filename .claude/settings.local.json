@@ -39,7 +39,9 @@
       "Bash(echo \"exit=$?\")",
       "Bash(npx --yes playwright --version)",
       "Bash(npm root *)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(node .claude/skills/visual-planner/scripts/make_url.mjs plan-viewer/example.json)",
+      "Read(//tmp/**)"
     ]
   }
 }

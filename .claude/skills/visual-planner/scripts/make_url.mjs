@@ -15,7 +15,23 @@ import { dirname, resolve } from 'node:path'
 const VALID_TYPES = new Set(['term', 'feature', 'data'])
 const REQUIRED_TOP_KEYS = ['title', 'glossary']
 
-function validate(plan) {
+function validateInteractions(path, state, seen) {
+  if (state == null) return
+  if (typeof state !== 'object' || !Array.isArray(state.interactions)) {
+    throw new Error(`${path}.interactions must be an array`)
+  }
+  state.interactions.forEach((edge, i) => {
+    for (const key of ['source', 'target']) {
+      if (!seen.has(edge?.[key])) {
+        throw new Error(
+          `${path}.interactions[${i}].${key} references unknown id: ${JSON.stringify(edge?.[key])}`,
+        )
+      }
+    }
+  })
+}
+
+export function validate(plan) {
   if (plan === null || typeof plan !== 'object' || Array.isArray(plan)) {
     throw new Error('top-level JSON must be an object')
   }
@@ -42,23 +58,40 @@ function validate(plan) {
       throw new Error(`glossary item ${JSON.stringify(item.id)} has unknown parentId ${JSON.stringify(item.parentId)}`)
     }
   }
-  for (const stateKey of ['currentState', 'proposedState']) {
-    const state = plan[stateKey]
-    if (state == null) continue
-    if (typeof state !== 'object' || !Array.isArray(state.interactions)) {
-      throw new Error(`${stateKey}.interactions must be an array`)
+
+  const hasPairs = 'pairs' in plan && plan.pairs !== undefined
+  const hasLegacy = plan.currentState !== undefined || plan.proposedState !== undefined
+
+  if (hasPairs && hasLegacy) {
+    throw new Error(
+      'plan must not define both top-level currentState/proposedState and pairs; use one form only',
+    )
+  }
+
+  if (hasPairs) {
+    if (!Array.isArray(plan.pairs)) {
+      throw new Error("'pairs' must be an array")
     }
-    state.interactions.forEach((edge, i) => {
-      for (const key of ['source', 'target']) {
-        if (!seen.has(edge?.[key])) {
-          throw new Error(`${stateKey}.interactions[${i}].${key} references unknown id: ${JSON.stringify(edge?.[key])}`)
-        }
+    if (plan.pairs.length === 0) {
+      throw new Error("'pairs' must not be an empty array")
+    }
+    plan.pairs.forEach((pair, i) => {
+      if (!pair || typeof pair !== 'object' || Array.isArray(pair)) {
+        throw new Error(`pairs[${i}] must be an object`)
       }
+      if (typeof pair.title !== 'string') {
+        throw new Error(`pairs[${i}].title must be a string (got ${typeof pair.title})`)
+      }
+      validateInteractions(`pairs[${i}].currentState`, pair.currentState, seen)
+      validateInteractions(`pairs[${i}].proposedState`, pair.proposedState, seen)
     })
+  } else {
+    validateInteractions('currentState', plan.currentState, seen)
+    validateInteractions('proposedState', plan.proposedState, seen)
   }
 }
 
-function encodePlan(plan) {
+export function encodePlan(plan) {
   const json = JSON.stringify(plan)
   return Buffer.from(json, 'utf8')
     .toString('base64')
@@ -107,7 +140,10 @@ async function main() {
   process.stdout.write(buildUrl(encodePlan(plan)) + '\n')
 }
 
-main().catch((err) => {
-  process.stderr.write(`${err.message}\n`)
-  process.exit(1)
-})
+const isCliEntry = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+if (isCliEntry) {
+  main().catch((err) => {
+    process.stderr.write(`${err.message}\n`)
+    process.exit(1)
+  })
+}
