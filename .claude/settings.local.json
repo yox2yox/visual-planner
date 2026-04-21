@@ -29,7 +29,17 @@
       "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/container/SvelteFlow/SvelteFlow.svelte')",
       "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/container/SvelteFlow/types.ts')",
       "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/src/lib/index.ts')",
-      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/CHANGELOG.md')"
+      "Bash(curl -sL 'https://raw.githubusercontent.com/xyflow/xyflow/main/packages/svelte/CHANGELOG.md')",
+      "Bash(python skill/visual-planner/scripts/make_url.py plan-viewer/example.json)",
+      "Bash(py --version)",
+      "Bash(python -c \"print\\('hello'\\)\")",
+      "Bash(where python *)",
+      "Bash(where python3 *)",
+      "Bash(where py *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npm root *)",
+      "Bash(npm ls *)"
     ]
   }
 }
