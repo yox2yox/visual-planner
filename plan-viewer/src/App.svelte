@@ -4,6 +4,7 @@
   import Header from './components/Header.svelte'
   import GlossaryPanel from './components/GlossaryPanel.svelte'
   import InteractionFlow from './components/InteractionFlow.svelte'
+  import NarrativePanel from './components/NarrativePanel.svelte'
 
   interface LoadResult {
     plan: Plan | null
@@ -51,7 +52,13 @@
       </div>
     </div>
   {:else if plan}
-    <Header title={plan.title} description={plan.description} />
+    <Header
+      title={plan.title}
+      description={plan.description}
+      metaphor={plan.metaphor}
+      takeaway={plan.takeaway}
+      evidence={plan.evidence}
+    />
 
     <main class="max-w-7xl mx-auto">
       <GlossaryPanel items={plan.glossary} />
@@ -64,6 +71,8 @@
           {#if pair.description}
             <p class="text-gray-600 text-sm mb-4">{pair.description}</p>
           {/if}
+
+          <NarrativePanel pair={pair} glossary={plan.glossary} />
 
           {#if pair.currentState}
             <div class="mt-4">

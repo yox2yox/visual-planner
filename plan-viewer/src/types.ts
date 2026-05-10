@@ -7,6 +7,10 @@ export interface GlossaryItem {
   description: string
   icon?: string
   parentId?: string
+  persona?: string
+  analogy?: string
+  responsibility?: string
+  evidence?: EvidenceRef[]
 }
 
 export interface Interaction {
@@ -17,9 +21,40 @@ export interface Interaction {
   data: string
 }
 
+export interface EvidenceRef {
+  path: string
+  startLine?: number
+  endLine?: number
+  label?: string
+}
+
+export interface Metaphor {
+  title: string
+  description: string
+}
+
+export interface StoryScene {
+  title: string
+  actor?: string
+  action: string
+  result?: string
+  interactionFlows?: number[]
+  evidence?: EvidenceRef[]
+}
+
+export interface ComparisonRow {
+  label: string
+  current?: string
+  proposed?: string
+  note?: string
+}
+
 export interface FlowState {
   description?: string
   interactions: Interaction[]
+  storyTitle?: string
+  scenes?: StoryScene[]
+  takeaway?: string
 }
 
 export interface StatePair {
@@ -27,12 +62,20 @@ export interface StatePair {
   description?: string
   currentState?: FlowState
   proposedState?: FlowState
+  comparison?: ComparisonRow[]
+  safeguards?: string[]
+  takeaway?: string
+  evidence?: EvidenceRef[]
 }
 
 export interface Plan {
   title: string
   description: string
   glossary: GlossaryItem[]
+  metaphor?: Metaphor
+  takeaway?: string
+  safeguards?: string[]
+  evidence?: EvidenceRef[]
   currentState?: FlowState
   proposedState?: FlowState
   pairs?: StatePair[]

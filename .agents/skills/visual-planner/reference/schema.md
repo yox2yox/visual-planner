@@ -8,6 +8,9 @@ Reference for the JSON payload consumed by the `viewer/` bundle via the `?plan=<
 {
   "title": "string — shown as the page heading",
   "description": "string — one-paragraph summary shown below the title",
+  "metaphor": { /* Metaphor — optional but strongly recommended */ },
+  "takeaway": "string — optional one-sentence 'ひと言で' summary",
+  "evidence": [ /* EvidenceRef[] — optional top-level file/line references */ ],
   "glossary": [ /* GlossaryItem[] — required, at least one */ ],
 
   // Pick ONE of the following state layouts (never both):
@@ -41,7 +44,11 @@ external systems, and data concepts that appear as sources, targets, or payloads
   "name":        "string — short label shown on the node",
   "description": "string — shown in the detail panel on click",
   "icon":        "string — emoji or single glyph. Optional. Defaults by type: term=📖, feature=⚡, data=💾",
-  "parentId":    "string — id of another glossary item. Optional. Nests this node under the parent (max 3 levels — deeper is dropped)"
+  "parentId":    "string — id of another glossary item. Optional. Nests this node under the parent (max 3 levels — deeper is dropped)",
+  "persona":     "string — optional role-name as a person, kaisetsu style",
+  "analogy":     "string — optional metaphor-world equivalent",
+  "responsibility": "string — optional plain-language duty",
+  "evidence":    [ /* EvidenceRef[] — optional file/line references */ ]
 }
 ```
 
@@ -64,7 +71,11 @@ external systems, and data concepts that appear as sources, targets, or payloads
   "title":         "string — shown as the pair's section header. Required field; empty string '' is allowed and hides the header",
   "description":   "string — optional paragraph shown under the title",
   "currentState":  { /* State — optional */ },
-  "proposedState": { /* State — optional */ }
+  "proposedState": { /* State — optional */ },
+  "comparison":    [ /* ComparisonRow[] — optional before/after table */ ],
+  "safeguards":    [ "string — optional defensive details or caveats" ],
+  "takeaway":      "string — optional pair-level 'ひと言で'",
+  "evidence":      [ /* EvidenceRef[] — optional file/line references */ ]
 }
 ```
 
@@ -85,7 +96,10 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
 ```jsonc
 {
   "description":  "string — paragraph explaining this snapshot",
-  "interactions": [ /* Interaction[] */ ]
+  "interactions": [ /* Interaction[] */ ],
+  "storyTitle":   "string — optional title for the chronological explanation",
+  "scenes":       [ /* StoryScene[] — optional kaisetsu-style story */ ],
+  "takeaway":     "string — optional state-level one-liner"
 }
 ```
 
@@ -104,6 +118,56 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
 Both `source` and `target` must exist in `glossary[]`.
 `interactions` are the system-flow explanation: read them in `flow` order to understand where the request/input comes from, what processing happens, and what data is handed off to the next participant.
 Within each `State`, `flow` values must be consecutive numbers: `1`, `2`, `3`, ...
+
+## Metaphor
+
+```jsonc
+{
+  "title": "string — short label for the real-world metaphor",
+  "description": "string — how to read the whole plan through that metaphor"
+}
+```
+
+Use one metaphor throughout the plan. The viewer shows this near the title so readers know the mental model before they see the graph.
+
+## StoryScene
+
+```jsonc
+{
+  "title": "string — scene heading, e.g. '場面1: 受付係が注文を受ける'",
+  "actor": "string — optional glossary id for the main actor",
+  "action": "string — what the actor does in plain language",
+  "result": "string — optional result of the scene",
+  "interactionFlows": [1, 2],
+  "evidence": [ /* EvidenceRef[] */ ]
+}
+```
+
+`interactionFlows` must reference flow numbers that exist in the same state's `interactions`. Scenes are rendered above the diagram, so the reader gets a story before reading arrows.
+
+## ComparisonRow
+
+```jsonc
+{
+  "label": "string — viewpoint, e.g. '認証情報の置き場所'",
+  "current": "string — current behaviour",
+  "proposed": "string — proposed behaviour",
+  "note": "string — why this matters, including simple-alternative caveats when useful"
+}
+```
+
+## EvidenceRef
+
+```jsonc
+{
+  "path": "string — file path or source name",
+  "startLine": 10,
+  "endLine": 25,
+  "label": "string — optional explanation"
+}
+```
+
+`path` is required when an evidence item is present. Line numbers are optional but should be included for code-backed plans whenever known.
 
 ## Minimal example (single pair, legacy form)
 

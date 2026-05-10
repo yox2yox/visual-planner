@@ -35,6 +35,55 @@ function validateInteractions(path, state, seen) {
       }
     }
   })
+  validateScenes(path, state, state.interactions, seen)
+}
+
+function validateEvidence(path, evidence) {
+  if (evidence == null) return
+  if (!Array.isArray(evidence)) throw new Error(`${path}.evidence must be an array`)
+  evidence.forEach((ref, i) => {
+    if (!ref || typeof ref !== 'object' || Array.isArray(ref)) {
+      throw new Error(`${path}.evidence[${i}] must be an object`)
+    }
+    if (typeof ref.path !== 'string' || ref.path.length === 0) {
+      throw new Error(`${path}.evidence[${i}].path must be a non-empty string`)
+    }
+    for (const key of ['startLine', 'endLine']) {
+      if (ref[key] != null && (!Number.isInteger(ref[key]) || ref[key] < 1)) {
+        throw new Error(`${path}.evidence[${i}].${key} must be a positive integer`)
+      }
+    }
+  })
+}
+
+function validateScenes(path, state, interactions, seen) {
+  if (state.scenes == null) return
+  if (!Array.isArray(state.scenes)) throw new Error(`${path}.scenes must be an array`)
+  const flows = new Set(interactions.map((interaction) => interaction.flow))
+  state.scenes.forEach((scene, i) => {
+    if (!scene || typeof scene !== 'object' || Array.isArray(scene)) {
+      throw new Error(`${path}.scenes[${i}] must be an object`)
+    }
+    for (const key of ['title', 'action']) {
+      if (typeof scene[key] !== 'string' || scene[key].length === 0) {
+        throw new Error(`${path}.scenes[${i}].${key} must be a non-empty string`)
+      }
+    }
+    if (scene.actor != null && !seen.has(scene.actor)) {
+      throw new Error(`${path}.scenes[${i}].actor references unknown id: ${JSON.stringify(scene.actor)}`)
+    }
+    if (scene.interactionFlows != null) {
+      if (!Array.isArray(scene.interactionFlows)) {
+        throw new Error(`${path}.scenes[${i}].interactionFlows must be an array`)
+      }
+      scene.interactionFlows.forEach((flow, j) => {
+        if (!flows.has(flow)) {
+          throw new Error(`${path}.scenes[${i}].interactionFlows[${j}] references unknown flow: ${JSON.stringify(flow)}`)
+        }
+      })
+    }
+    validateEvidence(`${path}.scenes[${i}]`, scene.evidence)
+  })
 }
 
 export function validate(plan) {
@@ -47,6 +96,7 @@ export function validate(plan) {
   if (!Array.isArray(plan.glossary) || plan.glossary.length === 0) {
     throw new Error("'glossary' must be a non-empty array")
   }
+  validateEvidence('plan', plan.evidence)
   const seen = new Set()
   plan.glossary.forEach((item, i) => {
     if (!item || typeof item !== 'object') throw new Error(`glossary[${i}] must be an object`)
@@ -58,6 +108,7 @@ export function validate(plan) {
     }
     if (seen.has(item.id)) throw new Error(`duplicate glossary id: ${JSON.stringify(item.id)}`)
     seen.add(item.id)
+    validateEvidence(`glossary[${i}]`, item.evidence)
   })
   for (const item of plan.glossary) {
     if (item.parentId != null && !seen.has(item.parentId)) {
@@ -88,6 +139,7 @@ export function validate(plan) {
       if (typeof pair.title !== 'string') {
         throw new Error(`pairs[${i}].title must be a string (got ${typeof pair.title})`)
       }
+      validateEvidence(`pairs[${i}]`, pair.evidence)
       validateInteractions(`pairs[${i}].currentState`, pair.currentState, seen)
       validateInteractions(`pairs[${i}].proposedState`, pair.proposedState, seen)
     })

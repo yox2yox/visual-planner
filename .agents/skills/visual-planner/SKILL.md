@@ -7,6 +7,8 @@ description: Generate a plan-viewer JSON and a self-contained HTML file (with th
 
 Turn a feature idea or migration plan into **two files**: a `plan.json` and a self-contained `plan.html` (the plan-viewer bundle with the JSON inlined). The user opens the HTML file in any browser — no server, no install, no network, no long URL.
 
+The viewer is not just a diagram renderer. It should explain the plan in the spirit of `kaisetsu`: one consistent real-world metaphor, components as characters, chronological scenes, evidence links, before/after comparison, and a final one-sentence takeaway. A readable story is more important than a dense all-in-one graph.
+
 Rendering is done by the pre-built `viewer/` bundle that ships with this skill; the generator script just embeds the plan JSON into a `<script id="plan-data" type="application/json">…</script>` placeholder baked into that HTML.
 
 ## When to use
@@ -24,9 +26,16 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
 
 1. **Gather the plan**. Identify:
    - `title`, `description` — one-line and paragraph summary
+   - `metaphor` — one physical, everyday metaphor that can carry the whole plan without changing midstream.
+   - `takeaway` — the "ひと言で" summary the reader should remember.
    - `glossary[]` — the nodes (features / data / terms) that are needed to explain the flows in `interactions`.
      Give each a stable `id`. Use `parentId` to nest (max 3 levels; deeper levels are dropped by the viewer).
      Define glossary items only at the granularity needed for the flow: request/input sources, processors, data stores, external systems, and data concepts that appear in the interaction steps.
+     For every important item, add kaisetsu fields:
+     - `persona` — role-name as a person (e.g. "受付係", "記録係", "案内係")
+     - `analogy` — what this item is in the metaphor world
+     - `responsibility` — what this person is responsible for
+     - `evidence[]` — file/line references when the plan is grounded in an existing codebase
    - State layout — choose ONE of:
      - `pairs[]` (recommended for non-trivial plans) — each pair has its own `title`, optional `description`, and its own `currentState` / `proposedState`. Pairs render as separate sections so each diagram stays readable.
      - Top-level `currentState` / `proposedState` (legacy, single-pair shortcut) — use only when the plan is small enough for one diagram.
@@ -44,12 +53,27 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
    - `label` is the processing/action phrase for that step.
    - `data` is the request, input, payload, entity, or result passed at that step.
    Prefer this over vague component-relationship edges: the diagram should answer "where did the request/input come from, what processing happens, and what data is handed off next?"
+   **Use `scenes` to make the flow readable.** Each state can include a `storyTitle`, `scenes[]`, and `takeaway`. A scene is the human explanation of one or more `interactionFlows`; it must say who acts, what they do, and what changes as a result. Keep scene text concrete and metaphor-consistent.
+   **Use `comparison` on each pair** when both current/proposed states exist. The comparison table should answer "what changed, why it matters, and why the new shape is easier to reason about."
+   **Use `safeguards`** for defensive design, validation, fallback behaviour, or constraints that keep the plan from breaking in edge cases.
 2. **Construct the JSON** following the schema in `reference/schema.md`. Validate while you build:
    - every `parentId` references an existing `id`
    - every `interactions[].source` / `.target` references an existing `id`
    - every `interactions[].flow` is a consecutive number starting at `1` within that state
    - `type` is one of `term` | `feature` | `data`
    - `pairs` and top-level `currentState`/`proposedState` are mutually exclusive — pick one form
+   - every `scenes[].interactionFlows[]` references an existing `interactions[].flow` in the same state
+   - every `evidence[]` item has a `path`; include `startLine` / `endLine` when known
+
+## Kaisetsu-style authoring rules
+
+- Pick one metaphor first and keep it to the end. Do not mix "restaurant", "factory", and "post office" in the same plan.
+- Make the glossary an actor list, not a dry dictionary. Names can stay technical, but `persona`, `analogy`, and `responsibility` should translate them into human roles.
+- Write scenes in time order. Prefer "受付係がチケットを確認する" over "validation occurs".
+- Put the story before the graph in the reader's mental model: the viewer renders narrative panels above each diagram, so the graph becomes confirmation rather than the first obstacle.
+- When explaining a change, include a `comparison` table and at least one "why the simple alternative is not enough" note in `comparison[].note` or `safeguards[]` when relevant.
+- Add evidence references for code-backed plans. Use `{ "path": "src/file.ts", "startLine": 10, "endLine": 25, "label": "..." }`. If exact lines are unavailable, use a file path and mark it as a broad reference.
+- End the plan and important pairs with `takeaway`: one or two lines that preserve the metaphor and state the essence.
 3. **Generate the files** by piping the JSON (or passing a path) into the helper script, along with an output basename:
    ```bash
    node <skill-dir>/scripts/make_plan.mjs path/to/plan.json /abs/path/to/output-basename

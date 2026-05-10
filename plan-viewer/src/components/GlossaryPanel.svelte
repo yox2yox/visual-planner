@@ -85,10 +85,21 @@
   function hasChildren(node: TreeNode): boolean {
     return node.children.length > 0
   }
+
+  function formatEvidence(item: GlossaryItem): string | null {
+    const ref = item.evidence?.[0]
+    if (!ref) return null
+    if (ref.startLine && ref.endLine && ref.endLine !== ref.startLine) {
+      return `${ref.path}:${ref.startLine}-${ref.endLine}`
+    }
+    if (ref.startLine) return `${ref.path}:${ref.startLine}`
+    return ref.path
+  }
 </script>
 
 <section class="px-6 py-6">
-  <h2 class="text-xl font-semibold text-gray-800 mb-4">辞書</h2>
+  <h2 class="text-xl font-semibold text-gray-800 mb-1">登場人物</h2>
+  <p class="text-sm text-gray-600 mb-4">図に出てくる要素を、人の役割として読めるように並べています。</p>
   <div class="flex gap-2 mb-4 border-b border-gray-200">
     {#each tabs as tab}
       <button
@@ -131,6 +142,22 @@
           </div>
           {#if node.item.description}
             <p class="text-xs text-gray-600 mt-1 ml-7 line-clamp-2">{node.item.description}</p>
+          {/if}
+          {#if node.item.persona || node.item.analogy || node.item.responsibility || formatEvidence(node.item)}
+            <div class="mt-2 ml-7 grid gap-1 text-xs text-gray-700">
+              {#if node.item.persona}
+                <p><span class="font-semibold">役名:</span> {node.item.persona}</p>
+              {/if}
+              {#if node.item.analogy}
+                <p><span class="font-semibold">たとえると:</span> {node.item.analogy}</p>
+              {/if}
+              {#if node.item.responsibility}
+                <p><span class="font-semibold">担当:</span> {node.item.responsibility}</p>
+              {/if}
+              {#if formatEvidence(node.item)}
+                <p><span class="font-semibold">裏付け:</span> <span class="font-mono">{formatEvidence(node.item)}</span></p>
+              {/if}
+            </div>
           {/if}
         </div>
       {/if}

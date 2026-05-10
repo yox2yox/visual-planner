@@ -1,0 +1,653 @@
+{
+  "title": "visual-planner kaisetsu化アップグレード",
+  "description": "図は出るけれど読んでも腹落ちしにくい状態から、メタファー、登場人物、時系列ストーリー、対比表、裏付け、ひと言まとめを持つ説明型viewerへ変えた内容を可視化する。",
+  "metaphor": {
+    "title": "地図だけ置いてある駅を、案内係つきの駅に改装する",
+    "description": "以前のvisual-plannerは、駅構内図だけを渡すようなものだった。今回の変更では、入口に案内係を置き、登場人物表を貼り、順路を場面ごとに説明し、最後に『要するにこの道です』と言える駅に改装した。"
+  },
+  "takeaway": "矢印の図を主役にするのではなく、読者が先に物語で道順をつかみ、そのあと図で確認できるviewerに変えた。",
+  "evidence": [
+    {
+      "path": "plan-viewer/src/App.svelte",
+      "startLine": 7,
+      "endLine": 75,
+      "label": "NarrativePanelを図の前に配置"
+    },
+    {
+      "path": ".agents/skills/visual-planner/SKILL.md",
+      "startLine": 10,
+      "endLine": 76,
+      "label": "kaisetsu型の生成ルール"
+    }
+  ],
+  "glossary": [
+    {
+      "id": "reader",
+      "type": "feature",
+      "name": "読む人",
+      "description": "visual-plannerのHTMLを開いて、設計や変更内容を理解したい人。",
+      "icon": "R",
+      "persona": "初めて駅に来た利用者",
+      "analogy": "構内図だけでは迷いやすい乗客",
+      "responsibility": "図と説明を見ながら、何が変わったのかを理解する"
+    },
+    {
+      "id": "skill-guide",
+      "type": "feature",
+      "name": "visual-planner skill",
+      "description": "AIがplan JSONを作るときの作法を決めるスキル定義。",
+      "icon": "S",
+      "persona": "駅の案内マニュアルを書く係",
+      "analogy": "案内係が何を説明すべきかを決める手順書",
+      "responsibility": "メタファー、登場人物、場面、対比表、裏付け、ひと言まとめをJSONに入れるよう促す",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/SKILL.md",
+          "startLine": 10,
+          "endLine": 76,
+          "label": "説明型planの作成ルール"
+        }
+      ]
+    },
+    {
+      "id": "schema",
+      "type": "feature",
+      "name": "schema reference",
+      "description": "plan JSONで使える項目を説明する仕様書。",
+      "icon": "C",
+      "persona": "駅の設備仕様を書く係",
+      "analogy": "案内板、順路札、裏付け札の設置ルール",
+      "responsibility": "metaphor、scenes、comparison、evidenceなどの形を定義する",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/reference/schema.md",
+          "startLine": 11,
+          "endLine": 170,
+          "label": "新しいJSON項目の仕様"
+        }
+      ]
+    },
+    {
+      "id": "validator",
+      "type": "feature",
+      "name": "make_plan validator",
+      "description": "plan JSONをHTMLに埋め込む前に、参照や裏付けの形を検査する生成スクリプト。",
+      "icon": "V",
+      "persona": "改札のチェック係",
+      "analogy": "番号札や案内札が正しくつながっているか確認する改札",
+      "responsibility": "evidenceのpath、sceneのactor、interactionFlowsの参照を検査する",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/make_plan.mjs",
+          "startLine": 41,
+          "endLine": 85,
+          "label": "evidenceとsceneの検査"
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "type": "feature",
+      "name": "viewer types",
+      "description": "viewerが受け取れるplan JSONのTypeScript型。",
+      "icon": "T",
+      "persona": "駅の部品台帳係",
+      "analogy": "案内板に置ける部品のリスト",
+      "responsibility": "persona、analogy、scenes、comparison、evidenceなどをviewerで扱える型にする",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/types.ts",
+          "startLine": 10,
+          "endLine": 78,
+          "label": "kaisetsu用の型追加"
+        }
+      ]
+    },
+    {
+      "id": "header",
+      "type": "feature",
+      "name": "Header",
+      "description": "ページ冒頭でタイトル、全体メタファー、ひと言まとめ、主な裏付けを表示するコンポーネント。",
+      "icon": "H",
+      "persona": "駅入口の大きな案内板",
+      "analogy": "最初に全体の読み方を教える看板",
+      "responsibility": "読者に『この図は何にたとえて読めばよいか』を先に渡す",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/Header.svelte",
+          "startLine": 7,
+          "endLine": 58,
+          "label": "メタファーと裏付け表示"
+        }
+      ]
+    },
+    {
+      "id": "glossary-panel",
+      "type": "feature",
+      "name": "GlossaryPanel",
+      "description": "辞書を登場人物表として表示するコンポーネント。",
+      "icon": "G",
+      "persona": "駅員紹介ボード",
+      "analogy": "誰が何の係かを説明する掲示板",
+      "responsibility": "技術要素を、人の役割、たとえ、担当として読めるようにする",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/GlossaryPanel.svelte",
+          "startLine": 90,
+          "endLine": 160,
+          "label": "登場人物表示"
+        }
+      ]
+    },
+    {
+      "id": "narrative-panel",
+      "type": "feature",
+      "name": "NarrativePanel",
+      "description": "対比表、場面ストーリー、防御、裏付け、ひと言を図の前に表示する新コンポーネント。",
+      "icon": "N",
+      "persona": "ホームまで一緒に歩く案内係",
+      "analogy": "構内図を見る前に順路を言葉で案内する人",
+      "responsibility": "読者が矢印を読む前に、変更の意味と流れを理解できるようにする",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/NarrativePanel.svelte",
+          "startLine": 25,
+          "endLine": 164,
+          "label": "ストーリー、対比、裏付け表示"
+        }
+      ]
+    },
+    {
+      "id": "flow-graph",
+      "type": "feature",
+      "name": "InteractionFlow",
+      "description": "従来からある矢印のフロー図。",
+      "icon": "F",
+      "persona": "駅構内図",
+      "analogy": "実際の通路と乗り換えを示す地図",
+      "responsibility": "物語で理解した流れを、ノードと矢印で確認させる"
+    },
+    {
+      "id": "app-shell",
+      "type": "feature",
+      "name": "App.svelte",
+      "description": "Header、GlossaryPanel、NarrativePanel、InteractionFlowを並べるviewer本体。",
+      "icon": "A",
+      "persona": "駅全体の配置係",
+      "analogy": "入口、案内板、順路説明、構内図の並びを決める係",
+      "responsibility": "読者が説明を読んでから図を見る順番に画面を組む",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/App.svelte",
+          "startLine": 58,
+          "endLine": 75,
+          "label": "HeaderとNarrativePanelの接続"
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "type": "feature",
+      "name": "tests",
+      "description": "新しいJSON項目の検証と既存機能の回帰確認を行うテスト群。",
+      "icon": "Q",
+      "persona": "開業前の点検係",
+      "analogy": "案内札が間違っていないか歩いて確認する係",
+      "responsibility": "sceneの参照、evidenceの形、actorの存在を検査する",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/__tests__/make_plan.test.mjs",
+          "startLine": 107,
+          "endLine": 187,
+          "label": "新しいvalidatorテスト"
+        }
+      ]
+    },
+    {
+      "id": "bundled-skill",
+      "type": "feature",
+      "name": "bundled skill copies",
+      "description": ".agentsと.claudeにあるスキル定義とviewer bundle。",
+      "icon": "B",
+      "persona": "各駅に同じ案内板を配る係",
+      "analogy": "どの入口から入っても同じ案内が見えるようにする配布係",
+      "responsibility": ".agentsと.claudeの両方で同じvisual-planner体験を使えるよう同期する"
+    },
+    {
+      "id": "plan-json",
+      "type": "data",
+      "name": "plan JSON",
+      "description": "メタファー、登場人物、場面、対比表、裏付けを含む説明データ。",
+      "icon": "J",
+      "persona": "案内台本",
+      "analogy": "案内係が読む順路台本",
+      "responsibility": "viewerに、図だけでなく説明の材料も渡す"
+    }
+  ],
+  "pairs": [
+    {
+      "title": "1. planを作る側の変更",
+      "description": "まず、AIが作るJSONそのものを『図の部品リスト』から『説明の台本』に変えた。",
+      "comparison": [
+        {
+          "label": "生成ルール",
+          "current": "title、description、glossary、interactionsを中心に図を作る",
+          "proposed": "metaphor、persona、scenes、comparison、evidence、takeawayも作る",
+          "note": "単に図の矢印を増やすだけでは、読み手の頭に順路ができない"
+        },
+        {
+          "label": "辞書の役割",
+          "current": "ノード名と説明の一覧",
+          "proposed": "登場人物表として、役名、たとえ、担当を持つ",
+          "note": "技術名を先に読ませるより、『誰が何をする係か』を先に見せる"
+        }
+      ],
+      "currentState": {
+        "description": "以前は、スキルが図に必要なノードと矢印を集めることに寄っていた。",
+        "storyTitle": "現状: 構内図だけを作る",
+        "scenes": [
+          {
+            "title": "場面1: 利用者が説明してほしい変更を渡す",
+            "actor": "reader",
+            "action": "読む人は『この変更を図にして』と依頼する。",
+            "result": "案内マニュアル係は、主にノードと矢印を集めようとする。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: 図の部品だけが台本になる",
+            "actor": "skill-guide",
+            "action": "案内マニュアル係はglossaryとinteractionsを中心にplan JSONを作る。",
+            "result": "構内図はできるが、初めて来た人にはどこから読めばよいか分かりにくい。",
+            "interactionFlows": [
+              2
+            ]
+          }
+        ],
+        "takeaway": "現状は、地図はあるけれど案内係がいない駅だった。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "reader",
+            "target": "skill-guide",
+            "label": "図にしたい変更を渡す",
+            "data": "変更内容"
+          },
+          {
+            "flow": 2,
+            "source": "skill-guide",
+            "target": "plan-json",
+            "label": "ノードと矢印を中心に作る",
+            "data": "glossary / interactions"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "変更後は、スキルがkaisetsuの5本柱をplan JSONへ入れるようになった。",
+        "storyTitle": "変更後: 案内台本まで作る",
+        "scenes": [
+          {
+            "title": "場面1: 案内マニュアル係が最初にたとえを決める",
+            "actor": "skill-guide",
+            "action": "駅、ホテル、受付など、最後まで使える一つのメタファーをplan JSONに入れる。",
+            "result": "読む人は、図を見る前に『どういう世界として読めばいいか』を持てる。",
+            "interactionFlows": [
+              1
+            ],
+            "evidence": [
+              {
+                "path": ".agents/skills/visual-planner/SKILL.md",
+                "startLine": 29,
+                "endLine": 38,
+                "label": "metaphorとpersonaの生成指示"
+              }
+            ]
+          },
+          {
+            "title": "場面2: 設備仕様係が新しい札を許可する",
+            "actor": "schema",
+            "action": "schema referenceがmetaphor、StoryScene、ComparisonRow、EvidenceRefの形を説明する。",
+            "result": "JSONを書く人もviewerも、同じ言葉で説明材料を扱える。",
+            "interactionFlows": [
+              2
+            ]
+          },
+          {
+            "title": "場面3: 改札係が台本の参照ミスを止める",
+            "actor": "validator",
+            "action": "make_plan validatorが、sceneのactorやflow参照、evidenceのpathを検査する。",
+            "result": "存在しない係や番号札を説明に混ぜにくくなる。",
+            "interactionFlows": [
+              3
+            ]
+          }
+        ],
+        "takeaway": "変更後は、図の材料だけでなく、案内係が読む台本までJSONに入る。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "reader",
+            "target": "skill-guide",
+            "label": "説明したい変更を渡す",
+            "data": "変更内容"
+          },
+          {
+            "flow": 2,
+            "source": "skill-guide",
+            "target": "schema",
+            "label": "kaisetsu項目に沿って台本化",
+            "data": "metaphor / persona / scenes / comparison"
+          },
+          {
+            "flow": 3,
+            "source": "schema",
+            "target": "validator",
+            "label": "参照と裏付けを検査",
+            "data": "actor / interactionFlows / evidence"
+          },
+          {
+            "flow": 4,
+            "source": "validator",
+            "target": "plan-json",
+            "label": "説明つきplanとして保存",
+            "data": "validated plan JSON"
+          }
+        ]
+      },
+      "safeguards": [
+        "scene.actorがglossaryに存在するか検査するので、ストーリーに急に知らない登場人物が出にくい",
+        "scene.interactionFlowsが同じstate内のflow番号を指すか検査するので、文章と矢印がズレにくい",
+        "evidence.pathを必須にしたので、雰囲気の説明だけで終わりにくい"
+      ],
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/make_plan.mjs",
+          "startLine": 41,
+          "endLine": 85,
+          "label": "validator強化"
+        }
+      ],
+      "takeaway": "plan JSONを、ただの地図データから案内台本に格上げした。"
+    },
+    {
+      "title": "2. viewerで読む順番を変えた",
+      "description": "次に、viewerの画面で『図をいきなり読ませる』のではなく、『説明を読んでから図で確認する』順番に変えた。",
+      "comparison": [
+        {
+          "label": "ページ冒頭",
+          "current": "タイトルと概要だけ",
+          "proposed": "タイトル、全体メタファー、ひと言、主な裏付け",
+          "note": "入口で読み方を渡すと、後続の図が急に親切になる"
+        },
+        {
+          "label": "辞書",
+          "current": "用語、機能、データの一覧",
+          "proposed": "登場人物表として役名、たとえ、担当、裏付けを表示",
+          "note": "『このコンポーネントは何者か』を先に飲み込める"
+        },
+        {
+          "label": "図の前",
+          "current": "AS-IS/TO-BEの説明文のあと、すぐグラフ",
+          "proposed": "対比表、場面ストーリー、防御、裏付け、ひと言を挟む",
+          "note": "図は最初の教材ではなく、理解確認の地図になる"
+        }
+      ],
+      "currentState": {
+        "description": "以前のviewerは、Header、GlossaryPanel、InteractionFlowを中心に構成されていた。",
+        "storyTitle": "現状: 駅入口からすぐ構内図を見る",
+        "scenes": [
+          {
+            "title": "場面1: 利用者が入口でタイトルだけ見る",
+            "actor": "header",
+            "action": "入口の案内板はタイトルと概要を出す。",
+            "result": "全体を何にたとえて読めばいいかは、まだ分からない。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: 辞書を眺める",
+            "actor": "glossary-panel",
+            "action": "駅員紹介ボードは、技術要素の名前と説明を一覧する。",
+            "result": "部品名は分かるが、誰が何の係かまでは腹落ちしにくい。",
+            "interactionFlows": [
+              2
+            ]
+          },
+          {
+            "title": "場面3: すぐ構内図に進む",
+            "actor": "flow-graph",
+            "action": "構内図がノードと矢印を見せる。",
+            "result": "線は見えるが、初見ではどの矢印から読めばよいか迷いやすい。",
+            "interactionFlows": [
+              3
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "app-shell",
+            "target": "header",
+            "label": "タイトルと概要を表示",
+            "data": "title / description"
+          },
+          {
+            "flow": 2,
+            "source": "app-shell",
+            "target": "glossary-panel",
+            "label": "辞書を表示",
+            "data": "glossary"
+          },
+          {
+            "flow": 3,
+            "source": "app-shell",
+            "target": "flow-graph",
+            "label": "図を表示",
+            "data": "interactions"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "変更後は、HeaderとGlossaryPanelを説明寄りに拡張し、新しいNarrativePanelを図の前に差し込んだ。",
+        "storyTitle": "変更後: 案内係が順路を説明してから構内図を見る",
+        "scenes": [
+          {
+            "title": "場面1: 入口の大きな案内板が読み方を渡す",
+            "actor": "header",
+            "action": "Headerが全体メタファー、ひと言まとめ、主な裏付けを表示する。",
+            "result": "読む人は『この変更は何の話か』を先に持てる。",
+            "interactionFlows": [
+              1
+            ],
+            "evidence": [
+              {
+                "path": "plan-viewer/src/components/Header.svelte",
+                "startLine": 29,
+                "endLine": 58,
+                "label": "メタファーと裏付けカード"
+              }
+            ]
+          },
+          {
+            "title": "場面2: 駅員紹介ボードが登場人物を紹介する",
+            "actor": "glossary-panel",
+            "action": "GlossaryPanelがpersona、analogy、responsibility、evidenceを表示する。",
+            "result": "読む人は技術要素を『役割を持った人』として理解できる。",
+            "interactionFlows": [
+              2
+            ]
+          },
+          {
+            "title": "場面3: 案内係が場面順に歩いて説明する",
+            "actor": "narrative-panel",
+            "action": "NarrativePanelが修正前後の対比表、AS-IS/TO-BEの場面、細かい防御、裏付け、ひと言を表示する。",
+            "result": "図を見る前に、何がどう変わったかの道順ができる。",
+            "interactionFlows": [
+              3
+            ]
+          },
+          {
+            "title": "場面4: 最後に構内図で確認する",
+            "actor": "flow-graph",
+            "action": "InteractionFlowが、物語で理解した流れを矢印として表示する。",
+            "result": "図は難解な入口ではなく、理解を確認する地図になる。",
+            "interactionFlows": [
+              4
+            ]
+          }
+        ],
+        "takeaway": "変更後のviewerは、読む人を入口から図まで案内してから矢印を見せる。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "app-shell",
+            "target": "header",
+            "label": "全体の読み方を表示",
+            "data": "metaphor / takeaway / evidence"
+          },
+          {
+            "flow": 2,
+            "source": "app-shell",
+            "target": "glossary-panel",
+            "label": "登場人物表を表示",
+            "data": "persona / analogy / responsibility"
+          },
+          {
+            "flow": 3,
+            "source": "app-shell",
+            "target": "narrative-panel",
+            "label": "図の前に物語を表示",
+            "data": "comparison / scenes / safeguards"
+          },
+          {
+            "flow": 4,
+            "source": "narrative-panel",
+            "target": "flow-graph",
+            "label": "対応する矢印を確認",
+            "data": "interactionFlows"
+          }
+        ]
+      },
+      "safeguards": [
+        "NarrativePanelはデータがあるときだけ表示されるので、古いplan JSONでも壊れにくい",
+        "既存のInteractionFlowは残しているので、図そのものの読み方やdiff表示は継続できる"
+      ],
+      "evidence": [
+        {
+          "path": "plan-viewer/src/App.svelte",
+          "startLine": 58,
+          "endLine": 75,
+          "label": "NarrativePanelを図の前へ配置"
+        },
+        {
+          "path": "plan-viewer/src/components/NarrativePanel.svelte",
+          "startLine": 58,
+          "endLine": 164,
+          "label": "対比表と場面表示"
+        }
+      ],
+      "takeaway": "viewerの順番を、地図先行から案内先行へ変えた。"
+    },
+    {
+      "title": "3. 同梱物と検証をそろえた",
+      "description": "最後に、変更したviewerとスキル定義が実際に使われる場所へ届くよう、bundle、サンプル、README、テストを更新した。",
+      "comparison": [
+        {
+          "label": "配布先",
+          "current": ".agentsと.claudeで内容がズレる可能性があった",
+          "proposed": "両方のskill定義、schema、validator、viewer bundleを同期",
+          "note": "入口が複数ある駅では、どの入口にも同じ案内板が必要"
+        },
+        {
+          "label": "サンプル",
+          "current": "認証刷新の図サンプル中心",
+          "proposed": "ホテル受付メタファー、場面、対比、ひと言を含むサンプルへ拡張",
+          "note": "次に作る人が、自然にkaisetsu型で真似できる"
+        },
+        {
+          "label": "検証",
+          "current": "既存のpairsやinteraction参照を検査",
+          "proposed": "evidence、scene flow参照、scene actorも検査",
+          "note": "説明が増えた分、説明同士の参照ミスも止める必要がある"
+        }
+      ],
+      "proposedState": {
+        "description": "ビルド済みviewerを両方のスキルbundleへ反映し、テストとサンプルで新しい読み方を確認した。",
+        "storyTitle": "変更後: 全駅に同じ案内板を配り、開業前に点検する",
+        "scenes": [
+          {
+            "title": "場面1: 配布係が各入口の案内板をそろえる",
+            "actor": "bundled-skill",
+            "action": ".agentsと.claudeのvisual-plannerスキルへ、同じSKILL.md、schema、validator、viewer HTMLを入れる。",
+            "result": "どちらの入口からvisual-plannerを使っても、同じ説明型viewerになる。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: 点検係が参照ミスを検査する",
+            "actor": "tests",
+            "action": "テストで、kaisetsu narrative fields、未知flow、未知actor、pathなしevidenceを確認する。",
+            "result": "説明が増えても、台本が破綻しにくい。",
+            "interactionFlows": [
+              2
+            ]
+          },
+          {
+            "title": "場面3: サンプル台本で新しい案内を試す",
+            "actor": "plan-json",
+            "action": "example.jsonにホテル受付メタファーと場面ストーリーを入れ、make_planでHTML化できることを確認する。",
+            "result": "今回の変更を実際に開けるHTMLとして確認できる。",
+            "interactionFlows": [
+              3
+            ]
+          }
+        ],
+        "takeaway": "実装、スキル、bundle、サンプル、テストまで同じ方向を向けた。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "bundled-skill",
+            "target": "skill-guide",
+            "label": "スキル定義とviewerを同期",
+            "data": ".agents / .claude"
+          },
+          {
+            "flow": 2,
+            "source": "tests",
+            "target": "validator",
+            "label": "新しい説明項目を検査",
+            "data": "56 passing tests"
+          },
+          {
+            "flow": 3,
+            "source": "plan-json",
+            "target": "validator",
+            "label": "サンプルを生成検証",
+            "data": "example HTML / JSON"
+          }
+        ]
+      },
+      "safeguards": [
+        "svelte-checkで型とSvelte diagnosticsを確認した",
+        "vitestで既存のdiff/filter/normalizeとmake_plan validatorを確認した",
+        "make_planで更新後example.jsonを実際にHTML化できることを確認した"
+      ],
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/__tests__/make_plan.test.mjs",
+          "startLine": 107,
+          "endLine": 187,
+          "label": "新しい検証テスト"
+        },
+        {
+          "path": "plan-viewer/example.json",
+          "label": "ホテル受付メタファーのサンプル"
+        }
+      ],
+      "takeaway": "案内係つきの駅として使えるよう、配布物と点検までそろえた。"
+    }
+  ]
+}

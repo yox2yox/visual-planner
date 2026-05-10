@@ -103,6 +103,89 @@ describe('validate (make_plan.mjs)', () => {
     })
     expect(() => validate(plan)).toThrow(/proposedState\.interactions\[0\]\.flow must be 1/)
   })
+
+  it('accepts kaisetsu narrative fields with evidence and scene flow links', () => {
+    const plan = makePlan({
+      metaphor: { title: '受付カウンター', description: '係員の受け渡しとして読む' },
+      takeaway: '受付係が確認して案内係へ渡すだけ。',
+      evidence: [{ path: 'src/app.ts', startLine: 10, endLine: 20 }],
+      glossary: [
+        {
+          id: 'a',
+          type: 'feature',
+          name: 'A',
+          persona: '受付係',
+          analogy: '入口のカウンター',
+          responsibility: '依頼を受け付ける',
+          evidence: [{ path: 'src/a.ts', startLine: 1 }],
+        },
+        { id: 'b', type: 'feature', name: 'B', persona: '案内係' },
+      ],
+      pairs: [
+        {
+          title: '受付',
+          comparison: [{ label: '渡し方', current: '手渡し', proposed: '番号札', note: '追跡しやすい' }],
+          safeguards: ['番号札がない依頼は受け付けない'],
+          evidence: [{ path: 'src/flow.ts' }],
+          proposedState: {
+            interactions: [okEdge],
+            storyTitle: '受付の流れ',
+            scenes: [
+              {
+                title: '場面1: 受付係が依頼を受ける',
+                actor: 'a',
+                action: '受付係が依頼内容を確認して、案内係へ番号札を渡す。',
+                result: '案内係は次に何をすればよいか分かる。',
+                interactionFlows: [1],
+                evidence: [{ path: 'src/flow.ts', startLine: 3, endLine: 8 }],
+              },
+            ],
+            takeaway: '番号札で迷子を防ぐ。',
+          },
+        },
+      ],
+    })
+    expect(() => validate(plan)).not.toThrow()
+  })
+
+  it('rejects scenes that reference unknown flow numbers', () => {
+    const plan = makePlan({
+      proposedState: {
+        interactions: [okEdge],
+        scenes: [
+          {
+            title: '場面1',
+            action: '受付係が存在しない手順を説明してしまう。',
+            interactionFlows: [2],
+          },
+        ],
+      },
+    })
+    expect(() => validate(plan)).toThrow(/scenes\[0\]\.interactionFlows\[0\]/)
+  })
+
+  it('rejects scenes whose actor is not in the glossary', () => {
+    const plan = makePlan({
+      proposedState: {
+        interactions: [okEdge],
+        scenes: [
+          {
+            title: '場面1',
+            actor: 'ghost',
+            action: '知らない係が急に登場してしまう。',
+          },
+        ],
+      },
+    })
+    expect(() => validate(plan)).toThrow(/scenes\[0\]\.actor/)
+  })
+
+  it('rejects evidence without a path', () => {
+    const plan = makePlan({
+      evidence: [{ label: 'missing path' }],
+    })
+    expect(() => validate(plan)).toThrow(/plan\.evidence\[0\]\.path/)
+  })
 })
 
 describe('escapeForScriptTag', () => {
