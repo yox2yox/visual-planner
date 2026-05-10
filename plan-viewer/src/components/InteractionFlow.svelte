@@ -239,7 +239,7 @@
           id: `${e.source}-${e.target}-${e.status}`,
           source: e.source,
           target: e.target,
-          label: `${e.label} / ${e.data}`,
+          label: `${e.flow}. ${e.label} / ${e.data}`,
           animated: e.status === 'added',
           style: edgeStyle(e.status),
         }))
@@ -258,7 +258,7 @@
         id: `${interaction.source}-${interaction.target}`,
         source: interaction.source,
         target: interaction.target,
-        label: `${interaction.label} / ${interaction.data}`,
+        label: `${interaction.flow}. ${interaction.label} / ${interaction.data}`,
       }))
   }
 

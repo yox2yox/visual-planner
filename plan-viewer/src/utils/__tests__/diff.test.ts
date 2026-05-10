@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { computeDiffEdges } from '../diff'
 import type { Interaction } from '../../types'
 
-const base: Interaction = { source: 'a', target: 'b', label: 'L', data: 'D' }
+const base: Interaction = { flow: 1, source: 'a', target: 'b', label: 'L', data: 'D' }
 
 describe('computeDiffEdges', () => {
   it('marks an edge only in proposed as added', () => {
@@ -35,14 +35,20 @@ describe('computeDiffEdges', () => {
     expect(result[0].status).toBe('changed')
   })
 
+  it('marks an edge with changed flow number as changed', () => {
+    const modified: Interaction = { ...base, flow: 2 }
+    const result = computeDiffEdges([base], [modified])
+    expect(result[0].status).toBe('changed')
+  })
+
   it('handles multiple edges with mixed statuses', () => {
     const current: Interaction[] = [
-      { source: 'a', target: 'b', label: 'L', data: 'D' },
-      { source: 'b', target: 'c', label: 'L2', data: 'D2' },
+      { flow: 1, source: 'a', target: 'b', label: 'L', data: 'D' },
+      { flow: 2, source: 'b', target: 'c', label: 'L2', data: 'D2' },
     ]
     const proposed: Interaction[] = [
-      { source: 'a', target: 'b', label: 'L-new', data: 'D' },
-      { source: 'c', target: 'd', label: 'L3', data: 'D3' },
+      { flow: 1, source: 'a', target: 'b', label: 'L-new', data: 'D' },
+      { flow: 2, source: 'c', target: 'd', label: 'L3', data: 'D3' },
     ]
     const result = computeDiffEdges(current, proposed)
     const statusMap = Object.fromEntries(

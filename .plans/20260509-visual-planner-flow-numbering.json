@@ -1,0 +1,410 @@
+{
+  "title": "visual-planner interactions フロー番号化 実装プラン",
+  "description": "既存の interactions を単なる機能間リンクではなく、リクエスト/入力元、処理、データ受け渡しを flow 番号順に読めるシステムフローとして扱うようにした実装内容。",
+  "glossary": [
+    {
+      "id": "user-request",
+      "type": "feature",
+      "name": "ユーザー要件",
+      "description": "interactions でシステムフローを説明し、glossary はそのフローに必要な粒度で定義するという今回の要求。"
+    },
+    {
+      "id": "skill-package",
+      "type": "feature",
+      "name": "visual-planner スキル",
+      "description": ".agents と .claude に配置されるスキル一式。SKILL.md、schema、script、viewer bundle を含む。"
+    },
+    {
+      "id": "skill-doc",
+      "type": "feature",
+      "name": "SKILL.md",
+      "description": "スキル利用時の生成ルール。interactions を番号付きシステムフローとして使うことを明文化した。",
+      "parentId": "skill-package"
+    },
+    {
+      "id": "schema-ref",
+      "type": "feature",
+      "name": "schema.md",
+      "description": "Plan JSON の参照仕様。Interaction に flow を追加し、glossary の粒度ルールも追記した。",
+      "parentId": "skill-package"
+    },
+    {
+      "id": "plan-author",
+      "type": "feature",
+      "name": "プラン作成者",
+      "description": "スキルを使って plan JSON を作る人または AI。flow 番号を付けた interactions を作る。"
+    },
+    {
+      "id": "make-plan",
+      "type": "feature",
+      "name": "make_plan.mjs",
+      "description": "plan JSON を検証し、自己完結 HTML と JSON を生成するスクリプト。",
+      "parentId": "skill-package"
+    },
+    {
+      "id": "validator",
+      "type": "feature",
+      "name": "Plan Validator",
+      "description": "glossary 参照、pairs/currentState の排他、interaction の source/target と flow 連番を検証する処理。",
+      "parentId": "make-plan"
+    },
+    {
+      "id": "viewer",
+      "type": "feature",
+      "name": "plan-viewer",
+      "description": "plan JSON を読み、glossary と interactions を図として表示する Svelte viewer。"
+    },
+    {
+      "id": "types",
+      "type": "feature",
+      "name": "TypeScript Types",
+      "description": "Interaction と DiffEdge に flow を追加して、viewer 内の型契約を更新した。",
+      "parentId": "viewer"
+    },
+    {
+      "id": "interaction-flow",
+      "type": "feature",
+      "name": "InteractionFlow",
+      "description": "edges のラベルに flow 番号を表示するコンポーネント。",
+      "parentId": "viewer"
+    },
+    {
+      "id": "diff-engine",
+      "type": "feature",
+      "name": "diff engine",
+      "description": "AS-IS と TO-BE の edge 差分を計算する処理。flow の変更も差分として扱うようにした。",
+      "parentId": "viewer"
+    },
+    {
+      "id": "docs-examples",
+      "type": "feature",
+      "name": "README / example.json",
+      "description": "サンプルと README を flow 付き interactions 形式へ更新した。"
+    },
+    {
+      "id": "test-suite",
+      "type": "feature",
+      "name": "テスト/型チェック",
+      "description": "make_plan、diff、normalize、typecheck、vitest で flow 必須化を検証する。"
+    },
+    {
+      "id": "bundle-sync",
+      "type": "feature",
+      "name": "bundle build / 同期",
+      "description": "vite build で pre-built viewer を更新し、.claude から .agents 側にも同期した。"
+    },
+    {
+      "id": "plan-json",
+      "type": "data",
+      "name": "Plan JSON",
+      "description": "glossary、pairs、currentState/proposedState、interactions を含む入力データ。"
+    },
+    {
+      "id": "numbered-interactions",
+      "type": "data",
+      "name": "numbered interactions",
+      "description": "flow, source, target, label, data を持つ、実行順に読める interaction 配列。"
+    },
+    {
+      "id": "validated-plan",
+      "type": "data",
+      "name": "validated plan",
+      "description": "make_plan.mjs の検証を通過した plan JSON。"
+    },
+    {
+      "id": "self-contained-html",
+      "type": "data",
+      "name": "self-contained HTML",
+      "description": "viewer bundle に plan JSON を埋め込んだ、単体で開ける HTML ファイル。"
+    }
+  ],
+  "pairs": [
+    {
+      "title": "スキル仕様の流れ",
+      "description": "interactions と glossary の意味づけを、スキル利用時の生成ルールとして固定した。",
+      "currentState": {
+        "description": "以前は glossary が機能/データ/用語の一覧、interactions が機能間のつながりとして読めるだけで、フロー順序や入力元から処理への流れは明確ではなかった。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "user-request",
+            "target": "skill-doc",
+            "label": "図の目的を要求",
+            "data": "機能間のつながり"
+          },
+          {
+            "flow": 2,
+            "source": "skill-doc",
+            "target": "plan-author",
+            "label": "ノードと edge を案内",
+            "data": "glossary / interactions"
+          },
+          {
+            "flow": 3,
+            "source": "plan-author",
+            "target": "viewer",
+            "label": "関係図として表示",
+            "data": "un-numbered edges"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "SKILL.md に、interactions は request/input の発生元から処理とデータ受け渡しを flow 番号順に説明するものだと明記した。glossary はそのフローに必要な登場要素だけを必要な粒度で定義する。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "user-request",
+            "target": "skill-doc",
+            "label": "システムフロー化を要求",
+            "data": "Goals / Criteria"
+          },
+          {
+            "flow": 2,
+            "source": "skill-doc",
+            "target": "plan-author",
+            "label": "flow 番号付与を指示",
+            "data": "flow rule"
+          },
+          {
+            "flow": 3,
+            "source": "skill-doc",
+            "target": "plan-author",
+            "label": "source/target/label/data の意味を指示",
+            "data": "request, process, handoff"
+          },
+          {
+            "flow": 4,
+            "source": "skill-doc",
+            "target": "plan-author",
+            "label": "glossary 粒度を制約",
+            "data": "flow-scoped glossary"
+          },
+          {
+            "flow": 5,
+            "source": "plan-author",
+            "target": "viewer",
+            "label": "番号付きフローとして出力",
+            "data": "numbered interactions"
+          }
+        ]
+      }
+    },
+    {
+      "title": "スキーマと生成時検証",
+      "description": "Plan JSON の契約として flow を追加し、生成時に連番を検証する。",
+      "currentState": {
+        "description": "旧形式では Interaction は source/target/label/data のみで、順序は配列位置に暗黙依存していた。validator は参照 ID の存在だけを主に見ていた。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "plan-author",
+            "target": "make-plan",
+            "label": "plan JSON を渡す",
+            "data": "interactions without flow"
+          },
+          {
+            "flow": 2,
+            "source": "make-plan",
+            "target": "validator",
+            "label": "参照整合性を検証",
+            "data": "source / target ids"
+          },
+          {
+            "flow": 3,
+            "source": "validator",
+            "target": "make-plan",
+            "label": "検証結果を返す",
+            "data": "valid or error"
+          },
+          {
+            "flow": 4,
+            "source": "make-plan",
+            "target": "self-contained-html",
+            "label": "HTML を生成",
+            "data": "embedded plan"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "schema.md と make_plan.mjs が flow を必須ステップ番号として扱い、各 state 内で 1 から連続することを検証する。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "plan-author",
+            "target": "schema-ref",
+            "label": "Interaction 契約を参照",
+            "data": "flow/source/target/label/data"
+          },
+          {
+            "flow": 2,
+            "source": "plan-author",
+            "target": "make-plan",
+            "label": "番号付き plan JSON を渡す",
+            "data": "numbered interactions"
+          },
+          {
+            "flow": 3,
+            "source": "make-plan",
+            "target": "validator",
+            "label": "flow 連番を検証",
+            "data": "1..N per state"
+          },
+          {
+            "flow": 4,
+            "source": "validator",
+            "target": "make-plan",
+            "label": "検証済み plan を返す",
+            "data": "validated plan"
+          },
+          {
+            "flow": 5,
+            "source": "make-plan",
+            "target": "self-contained-html",
+            "label": "HTML と JSON を生成",
+            "data": "validated plan"
+          }
+        ]
+      }
+    },
+    {
+      "title": "viewer 表示と差分判定",
+      "description": "viewer 側でも flow を型として受け取り、edge label と差分判定に反映する。",
+      "currentState": {
+        "description": "edge label は label / data のみを表示していたため、実行順は図から直接読み取りづらかった。diff も label/data の変更だけを changed として扱っていた。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "viewer",
+            "target": "types",
+            "label": "Interaction 型を読む",
+            "data": "source/target/label/data"
+          },
+          {
+            "flow": 2,
+            "source": "viewer",
+            "target": "interaction-flow",
+            "label": "edge label を組み立て",
+            "data": "label / data"
+          },
+          {
+            "flow": 3,
+            "source": "viewer",
+            "target": "diff-engine",
+            "label": "AS-IS/TO-BE を比較",
+            "data": "label/data changes"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "Interaction と DiffEdge に flow を追加し、InteractionFlow は edge label を '1. label / data' 形式で表示する。diff engine は flow 番号の変更も changed として扱う。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "viewer",
+            "target": "types",
+            "label": "flow 付き Interaction を受け取る",
+            "data": "Interaction.flow"
+          },
+          {
+            "flow": 2,
+            "source": "types",
+            "target": "interaction-flow",
+            "label": "番号付き edge データを渡す",
+            "data": "flow/label/data"
+          },
+          {
+            "flow": 3,
+            "source": "interaction-flow",
+            "target": "viewer",
+            "label": "edge label に番号を表示",
+            "data": "1. label / data"
+          },
+          {
+            "flow": 4,
+            "source": "types",
+            "target": "diff-engine",
+            "label": "flow を差分対象に含める",
+            "data": "DiffEdge.flow"
+          },
+          {
+            "flow": 5,
+            "source": "diff-engine",
+            "target": "interaction-flow",
+            "label": "変更 edge を返す",
+            "data": "status changed"
+          }
+        ]
+      }
+    },
+    {
+      "title": "サンプル、テスト、配布物更新",
+      "description": "新しい flow 必須契約が利用例、テスト、ビルド済み skill bundle まで反映されるようにした。",
+      "currentState": {
+        "description": "README と example.json には flow なしの interaction 例が残っており、テストデータも旧 Interaction 型を使っていた。pre-built viewer も古い label 表示のままだった。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "docs-examples",
+            "target": "plan-author",
+            "label": "旧形式を提示",
+            "data": "interactions without flow"
+          },
+          {
+            "flow": 2,
+            "source": "test-suite",
+            "target": "types",
+            "label": "旧型データで検証",
+            "data": "missing flow"
+          },
+          {
+            "flow": 3,
+            "source": "bundle-sync",
+            "target": "skill-package",
+            "label": "古い viewer を同梱",
+            "data": "un-numbered edge labels"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "README、example.json、unit tests を flow 付き形式へ更新し、typecheck/vitest/build を通したうえで .agents 側の skill bundle に同期した。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "schema-ref",
+            "target": "docs-examples",
+            "label": "新形式を反映",
+            "data": "flow examples"
+          },
+          {
+            "flow": 2,
+            "source": "types",
+            "target": "test-suite",
+            "label": "テストデータを更新",
+            "data": "flow required"
+          },
+          {
+            "flow": 3,
+            "source": "test-suite",
+            "target": "bundle-sync",
+            "label": "検証成功を渡す",
+            "data": "tsc / vitest"
+          },
+          {
+            "flow": 4,
+            "source": "viewer",
+            "target": "bundle-sync",
+            "label": "pre-built viewer を再生成",
+            "data": "vite build output"
+          },
+          {
+            "flow": 5,
+            "source": "bundle-sync",
+            "target": "skill-package",
+            "label": ".agents へ同期",
+            "data": "updated skill files"
+          }
+        ]
+      }
+    }
+  ]
+}

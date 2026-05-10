@@ -16,7 +16,7 @@ export function computeDiffEdges(
     const ci = currentMap.get(key)
     if (!ci) {
       result.push({ ...pi, status: 'added' })
-    } else if (ci.label !== pi.label || ci.data !== pi.data) {
+    } else if (ci.flow !== pi.flow || ci.label !== pi.label || ci.data !== pi.data) {
       result.push({ ...pi, status: 'changed' })
     } else {
       result.push({ ...pi, status: 'unchanged' })

@@ -7,7 +7,7 @@ const baseGlossary = [{ id: 'a', type: 'feature' as const, name: 'A', descriptio
 function makeState(label = 'call') {
   return {
     description: 'desc',
-    interactions: [{ source: 'a', target: 'a', label, data: 'X' }],
+    interactions: [{ flow: 1, source: 'a', target: 'a', label, data: 'X' }],
   }
 }
 

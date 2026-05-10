@@ -10,6 +10,7 @@ export interface GlossaryItem {
 }
 
 export interface Interaction {
+  flow: number
   source: string
   target: string
   label: string
@@ -40,6 +41,7 @@ export interface Plan {
 export type EdgeDiffStatus = 'added' | 'changed' | 'removed' | 'unchanged'
 
 export interface DiffEdge {
+  flow: number
   source: string
   target: string
   label: string
