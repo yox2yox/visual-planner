@@ -37,29 +37,33 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
      - `responsibility` — what this person is responsible for
      - `evidence[]` — file/line references when the plan is grounded in an existing codebase
    - State layout — choose ONE of:
-     - `pairs[]` (recommended for non-trivial plans) — each pair has its own `title`, optional `description`, and its own `currentState` / `proposedState`. Pairs render as separate sections so each diagram stays readable.
+     - `pairs[]` (recommended for non-trivial plans) — each pair has its own `title`, optional `description`, and optional `currentState` / `proposedState`. Pairs render as separate sections so each diagram stays readable when a diagram is needed.
      - Top-level `currentState` / `proposedState` (legacy, single-pair shortcut) — use only when the plan is small enough for one diagram.
-   If the user only has one state, just produce that one; omit the other.
+   If the user only has one state, just produce that one; omit the other. If a diagram is not useful, use a pair with prose/comparison/safeguards and omit states or omit `interactions`.
 
    **Split into multiple pairs when the plan is complex.** A single diagram crammed with every interaction quickly becomes unreadable. Split into pairs whenever any of these hold:
    - more than ~10 interactions in a single state, OR
    - more than ~10 glossary nodes touched by one state, OR
    - the plan covers multiple independent flows (e.g. "login" vs. "API call" vs. "logout") that users will reason about separately.
    Give each pair a short `title` naming the flow it covers (e.g. "ログイン", "API 呼び出し", "ログアウト"). Titles are shown as section headers; leaving a title empty hides the header.
-   **Use `interactions` to explain system flows.** Each interaction is one numbered step in a request/input flow:
+   **Use `interactions` to explain system flows.** Include them only when a diagram helps. Each interaction is one numbered step in a request/input flow:
    - `flow` is the step number within that state, starting at `1` and increasing by `1` in execution order.
    - `source` is where the request, input, process call, or data handoff starts.
    - `target` is the component or data item that receives it.
    - `label` is the processing/action phrase for that step.
    - `data` is the request, input, payload, entity, or result passed at that step.
    Prefer this over vague component-relationship edges: the diagram should answer "where did the request/input come from, what processing happens, and what data is handed off next?"
+   The viewer only draws glossary nodes that appear as `source` or `target` in the state being rendered, so keep interactions focused and leave background-only terms in the glossary.
+   **Use `diagram` only when it improves comprehension.** Diagrams are optional explanation aids, not required payload. When a default diagram is hard to read, add state-level `diagram.nodePositions` and/or interaction-level rendering hints (`sourcePosition`, `targetPosition`, `edgeType`, `edgeStyle`, `animated`). Prefer splitting into multiple `pairs` before over-tuning one crowded diagram.
    **Use `scenes` to make the flow readable.** Each state can include a `storyTitle`, `scenes[]`, and `takeaway`. A scene is the human explanation of one or more `interactionFlows`; it must say who acts, what they do, and what changes as a result. Keep scene text concrete and metaphor-consistent.
    **Use `comparison` on each pair** when both current/proposed states exist. The comparison table should answer "what changed, why it matters, and why the new shape is easier to reason about."
    **Use `safeguards`** for defensive design, validation, fallback behaviour, or constraints that keep the plan from breaking in edge cases.
 2. **Construct the JSON** following the schema in `reference/schema.md`. Validate while you build:
    - every `parentId` references an existing `id`
-   - every `interactions[].source` / `.target` references an existing `id`
-   - every `interactions[].flow` is a consecutive number starting at `1` within that state
+   - when `interactions` exists, every `interactions[].source` / `.target` references an existing `id`
+   - when `interactions` exists, every `interactions[].flow` is a consecutive number starting at `1` within that state
+   - optional diagram positions reference existing glossary ids
+   - optional edge positions/types/styles use the values listed in `reference/schema.md`
    - `type` is one of `term` | `feature` | `data`
    - `pairs` and top-level `currentState`/`proposedState` are mutually exclusive — pick one form
    - every `scenes[].interactionFlows[]` references an existing `interactions[].flow` in the same state

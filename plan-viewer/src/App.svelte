@@ -41,6 +41,10 @@
   }
 
   const { plan, pairs, error } = loadPlan()
+
+  function hasInteractions(state: StatePair['currentState']): boolean {
+    return Boolean(state?.interactions?.length)
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -80,10 +84,13 @@
               {#if pair.currentState.description}
                 <p class="text-gray-600 text-sm mb-4">{pair.currentState.description}</p>
               {/if}
-              <InteractionFlow
-                glossary={plan.glossary}
-                interactions={pair.currentState.interactions}
-              />
+              {#if hasInteractions(pair.currentState)}
+                <InteractionFlow
+                  glossary={plan.glossary}
+                  interactions={pair.currentState.interactions ?? []}
+                  diagram={pair.currentState.diagram}
+                />
+              {/if}
             </div>
           {/if}
 
@@ -93,12 +100,15 @@
               {#if pair.proposedState.description}
                 <p class="text-gray-600 text-sm mb-4">{pair.proposedState.description}</p>
               {/if}
-              <InteractionFlow
-                glossary={plan.glossary}
-                interactions={pair.proposedState.interactions}
-                isDiff={pair.currentState !== undefined}
-                baseInteractions={pair.currentState?.interactions ?? []}
-              />
+              {#if hasInteractions(pair.proposedState)}
+                <InteractionFlow
+                  glossary={plan.glossary}
+                  interactions={pair.proposedState.interactions ?? []}
+                  diagram={pair.proposedState.diagram}
+                  isDiff={pair.currentState !== undefined}
+                  baseInteractions={pair.currentState?.interactions ?? []}
+                />
+              {/if}
             </div>
           {/if}
         </section>

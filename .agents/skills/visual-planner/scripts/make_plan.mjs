@@ -16,14 +16,21 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const VALID_TYPES = new Set(['term', 'feature', 'data'])
+const VALID_POSITIONS = new Set(['top', 'right', 'bottom', 'left'])
+const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep'])
+const VALID_EDGE_STYLES = new Set(['solid', 'dashed', 'dotted', 'bold'])
 const REQUIRED_TOP_KEYS = ['title', 'glossary']
 
 function validateInteractions(path, state, seen) {
   if (state == null) return
-  if (typeof state !== 'object' || !Array.isArray(state.interactions)) {
-    throw new Error(`${path}.interactions must be an array`)
+  if (typeof state !== 'object' || Array.isArray(state)) {
+    throw new Error(`${path} must be an object`)
   }
-  state.interactions.forEach((edge, i) => {
+  if (state.interactions != null && !Array.isArray(state.interactions)) {
+    throw new Error(`${path}.interactions must be an array when present`)
+  }
+  const interactions = state.interactions ?? []
+  interactions.forEach((edge, i) => {
     if (!Number.isInteger(edge?.flow) || edge.flow !== i + 1) {
       throw new Error(`${path}.interactions[${i}].flow must be ${i + 1}`)
     }
@@ -34,8 +41,70 @@ function validateInteractions(path, state, seen) {
         )
       }
     }
+    for (const key of ['sourcePosition', 'targetPosition']) {
+      if (edge?.[key] != null && !VALID_POSITIONS.has(edge[key])) {
+        throw new Error(`${path}.interactions[${i}].${key} must be one of ${[...VALID_POSITIONS].join(', ')}`)
+      }
+    }
+    if (edge?.edgeType != null && !VALID_EDGE_TYPES.has(edge.edgeType)) {
+      throw new Error(`${path}.interactions[${i}].edgeType must be one of ${[...VALID_EDGE_TYPES].join(', ')}`)
+    }
+    if (edge?.edgeStyle != null && !VALID_EDGE_STYLES.has(edge.edgeStyle)) {
+      throw new Error(`${path}.interactions[${i}].edgeStyle must be one of ${[...VALID_EDGE_STYLES].join(', ')}`)
+    }
+    if (edge?.animated != null && typeof edge.animated !== 'boolean') {
+      throw new Error(`${path}.interactions[${i}].animated must be a boolean`)
+    }
   })
-  validateScenes(path, state, state.interactions, seen)
+  validateDiagram(`${path}.diagram`, state.diagram, seen)
+  validateScenes(path, state, interactions, seen)
+}
+
+function validateDiagram(path, diagram, seen) {
+  if (diagram == null) return
+  if (!diagram || typeof diagram !== 'object' || Array.isArray(diagram)) {
+    throw new Error(`${path} must be an object`)
+  }
+  if (diagram.nodePositions != null) {
+    if (!diagram.nodePositions || typeof diagram.nodePositions !== 'object' || Array.isArray(diagram.nodePositions)) {
+      throw new Error(`${path}.nodePositions must be an object keyed by glossary id`)
+    }
+    for (const [id, position] of Object.entries(diagram.nodePositions)) {
+      if (!seen.has(id)) throw new Error(`${path}.nodePositions references unknown id: ${JSON.stringify(id)}`)
+      if (!position || typeof position !== 'object' || Array.isArray(position)) {
+        throw new Error(`${path}.nodePositions[${JSON.stringify(id)}] must be an object`)
+      }
+      for (const key of ['x', 'y']) {
+        if (typeof position[key] !== 'number' || !Number.isFinite(position[key])) {
+          throw new Error(`${path}.nodePositions[${JSON.stringify(id)}].${key} must be a finite number`)
+        }
+      }
+    }
+  }
+  if (diagram.edges != null) {
+    if (!diagram.edges || typeof diagram.edges !== 'object' || Array.isArray(diagram.edges)) {
+      throw new Error(`${path}.edges must be an object keyed by flow number or source->target`)
+    }
+    for (const [key, options] of Object.entries(diagram.edges)) {
+      if (!options || typeof options !== 'object' || Array.isArray(options)) {
+        throw new Error(`${path}.edges[${JSON.stringify(key)}] must be an object`)
+      }
+      for (const positionKey of ['sourcePosition', 'targetPosition']) {
+        if (options[positionKey] != null && !VALID_POSITIONS.has(options[positionKey])) {
+          throw new Error(`${path}.edges[${JSON.stringify(key)}].${positionKey} must be one of ${[...VALID_POSITIONS].join(', ')}`)
+        }
+      }
+      if (options.type != null && !VALID_EDGE_TYPES.has(options.type)) {
+        throw new Error(`${path}.edges[${JSON.stringify(key)}].type must be one of ${[...VALID_EDGE_TYPES].join(', ')}`)
+      }
+      if (options.style != null && !VALID_EDGE_STYLES.has(options.style)) {
+        throw new Error(`${path}.edges[${JSON.stringify(key)}].style must be one of ${[...VALID_EDGE_STYLES].join(', ')}`)
+      }
+      if (options.animated != null && typeof options.animated !== 'boolean') {
+        throw new Error(`${path}.edges[${JSON.stringify(key)}].animated must be a boolean`)
+      }
+    }
+  }
 }
 
 function validateEvidence(path, evidence) {

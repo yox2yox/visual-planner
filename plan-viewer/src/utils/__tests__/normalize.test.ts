@@ -40,8 +40,8 @@ describe('normalizePlan', () => {
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(1)
     expect(result.pairs[0].title).toBe('')
-    expect(result.pairs[0].currentState?.interactions[0].label).toBe('old')
-    expect(result.pairs[0].proposedState?.interactions[0].label).toBe('new')
+    expect(result.pairs[0].currentState?.interactions?.[0].label).toBe('old')
+    expect(result.pairs[0].proposedState?.interactions?.[0].label).toBe('new')
   })
 
   it('wraps legacy with only currentState', () => {
@@ -53,7 +53,7 @@ describe('normalizePlan', () => {
     }
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(1)
-    expect(result.pairs[0].currentState?.interactions[0].label).toBe('only-current')
+    expect(result.pairs[0].currentState?.interactions?.[0].label).toBe('only-current')
     expect(result.pairs[0].proposedState).toBeUndefined()
   })
 
@@ -92,6 +92,23 @@ describe('normalizePlan', () => {
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(2)
     expect(result.pairs.map((p) => p.title)).toEqual(['keep', 'also-keep'])
+  })
+
+  it('keeps explanation-only pairs without diagrams', () => {
+    const plan: Plan = {
+      title: 't',
+      description: 'd',
+      glossary: baseGlossary,
+      pairs: [
+        {
+          title: 'explain',
+          comparison: [{ label: 'shape', current: 'many', proposed: 'few' }],
+        },
+      ],
+    }
+    const result = normalizePlan(plan)
+    expect(result.pairs).toHaveLength(1)
+    expect(result.pairs[0].title).toBe('explain')
   })
 
   it('returns empty pairs when neither legacy nor pairs are present', () => {

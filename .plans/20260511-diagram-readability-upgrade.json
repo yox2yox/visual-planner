@@ -1,0 +1,473 @@
+{
+  "title": "visual-planner 図の見やすさ改善",
+  "description": "余計なノードを減らし、必要なときだけ図を使い、JSONから配置や辺の見た目を調整できるようにした変更の説明です。",
+  "metaphor": {
+    "title": "舞台の照明係",
+    "description": "登場人物リストは舞台裏に残しつつ、その場面で演技する人だけに照明を当て、必要なら立ち位置と動線も台本で指定します。"
+  },
+  "takeaway": "図は全部を並べる掲示板ではなく、説明したい場面だけを照らす舞台になりました。",
+  "glossary": [
+    {
+      "id": "plan-json",
+      "type": "data",
+      "name": "Plan JSON",
+      "description": "説明内容と図の任意設定を持つ入力データ。",
+      "persona": "台本係",
+      "analogy": "場面ごとの台本",
+      "responsibility": "どの登場人物を出すか、立ち位置や動線を必要に応じて指定する",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/types.ts",
+          "startLine": 22,
+          "endLine": 109,
+          "label": "diagram と edge hint の型"
+        }
+      ]
+    },
+    {
+      "id": "interaction-flow",
+      "type": "feature",
+      "name": "InteractionFlow",
+      "description": "図を描画する Svelte コンポーネント。",
+      "persona": "舞台監督",
+      "analogy": "場面の照明と動線を決める人",
+      "responsibility": "state の interactions から描画対象、配置、辺を組み立てる",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/InteractionFlow.svelte",
+          "startLine": 28,
+          "endLine": 385,
+          "label": "図の描画ロジック"
+        }
+      ]
+    },
+    {
+      "id": "used-node-filter",
+      "type": "feature",
+      "name": "使用ノードフィルタ",
+      "description": "その図で使う source/target だけを残す処理。",
+      "persona": "照明係",
+      "analogy": "今の場面に出る役者だけへライトを当てる係",
+      "responsibility": "interactions に出てこない glossary 項目を図から外す",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/utils/filter.ts",
+          "startLine": 104,
+          "endLine": 114,
+          "label": "使用ノード抽出"
+        }
+      ]
+    },
+    {
+      "id": "manual-layout",
+      "type": "feature",
+      "name": "手動レイアウト",
+      "description": "JSON の nodePositions からノード位置を反映する処理。",
+      "persona": "立ち位置係",
+      "analogy": "役者の立ち位置を床に印づけする係",
+      "responsibility": "自動配置で読みにくい場面だけ座標を受け取る",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/InteractionFlow.svelte",
+          "startLine": 148,
+          "endLine": 164,
+          "label": "nodePositions の反映"
+        }
+      ]
+    },
+    {
+      "id": "edge-hints",
+      "type": "feature",
+      "name": "辺の見た目指定",
+      "description": "接続方向、線種、アニメーションなどの描画ヒント。",
+      "persona": "動線係",
+      "analogy": "矢印の出入り口と線の種類を決める係",
+      "responsibility": "edgeType、edgeStyle、sourcePosition、targetPosition を図に渡す",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/InteractionFlow.svelte",
+          "startLine": 106,
+          "endLine": 363,
+          "label": "辺オプションの反映"
+        }
+      ]
+    },
+    {
+      "id": "app-renderer",
+      "type": "feature",
+      "name": "App renderer",
+      "description": "pair/state を表示し、図が必要なときだけ InteractionFlow を呼ぶ画面本体。",
+      "persona": "進行係",
+      "analogy": "場面を順番に出す司会",
+      "responsibility": "interactions がある state だけ図を表示する",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/App.svelte",
+          "startLine": 45,
+          "endLine": 105,
+          "label": "図の任意表示"
+        }
+      ]
+    },
+    {
+      "id": "normalizer",
+      "type": "feature",
+      "name": "normalizePlan",
+      "description": "pairs の表示対象を整理する処理。",
+      "persona": "台本整理係",
+      "analogy": "図がない説明場面も捨てずに舞台順へ入れる係",
+      "responsibility": "説明だけの pair を残す",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/utils/normalize.ts",
+          "startLine": 7,
+          "endLine": 33,
+          "label": "visible content 判定"
+        }
+      ]
+    },
+    {
+      "id": "validator",
+      "type": "feature",
+      "name": "make_plan validator",
+      "description": "plan JSON を HTML 化する前に契約違反を検出する処理。",
+      "persona": "検品係",
+      "analogy": "台本の立ち位置や動線に誤字がないか確認する係",
+      "responsibility": "位置、線種、未知 id を生成前に弾く",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/make_plan.mjs",
+          "startLine": 19,
+          "endLine": 103,
+          "label": "diagram option validation"
+        }
+      ]
+    },
+    {
+      "id": "schema-doc",
+      "type": "data",
+      "name": "Schema docs",
+      "description": "JSON 利用者向けの仕様説明。",
+      "persona": "案内板係",
+      "analogy": "台本の書き方を示す案内板",
+      "responsibility": "任意の図、使用ノードだけの描画、diagram 設定を明文化する",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/reference/schema.md",
+          "startLine": 101,
+          "endLine": 162,
+          "label": "diagram schema"
+        }
+      ]
+    }
+  ],
+  "pairs": [
+    {
+      "title": "1. 余計なノードを消す",
+      "description": "state ごとに interactions で使われたノードだけを図へ出すようにしました。",
+      "currentState": {
+        "description": "以前は glossary 側の feature をまとめて図に出すため、説明していない役者まで舞台に上がっていました。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "plan-json",
+            "target": "interaction-flow",
+            "label": "全体の glossary を渡す",
+            "data": "All feature nodes"
+          },
+          {
+            "flow": 2,
+            "source": "interaction-flow",
+            "target": "schema-doc",
+            "label": "使っていない項目も見えてしまう",
+            "data": "Noisy diagram"
+          }
+        ],
+        "diagram": {
+          "nodePositions": {
+            "plan-json": {
+              "x": 0,
+              "y": 80
+            },
+            "interaction-flow": {
+              "x": 300,
+              "y": 80
+            },
+            "schema-doc": {
+              "x": 600,
+              "y": 80
+            }
+          },
+          "edges": {
+            "1": {
+              "sourcePosition": "right",
+              "targetPosition": "left",
+              "type": "smoothstep",
+              "style": "dashed"
+            },
+            "2": {
+              "sourcePosition": "right",
+              "targetPosition": "left",
+              "type": "smoothstep",
+              "style": "dotted"
+            }
+          }
+        }
+      },
+      "proposedState": {
+        "description": "今は InteractionFlow が最初に使用ノードフィルタを通し、source/target に出た項目だけを描画します。",
+        "storyTitle": "場面: 照明係が舞台を絞る",
+        "scenes": [
+          {
+            "title": "台本から出演者を拾う",
+            "actor": "used-node-filter",
+            "action": "照明係が interactions を読み、source と target に出た id だけを集めます。",
+            "result": "glossary に背景情報が多くても、図には今の場面で使う人だけが残ります。",
+            "interactionFlows": [
+              1,
+              2
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "interaction-flow",
+            "target": "used-node-filter",
+            "label": "source/target を抽出",
+            "data": "Used ids",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "edgeType": "smoothstep",
+            "edgeStyle": "bold",
+            "animated": true
+          },
+          {
+            "flow": 2,
+            "source": "used-node-filter",
+            "target": "interaction-flow",
+            "label": "描画対象だけ返す",
+            "data": "Visible nodes",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "edgeType": "smoothstep"
+          }
+        ],
+        "diagram": {
+          "nodePositions": {
+            "interaction-flow": {
+              "x": 0,
+              "y": 80
+            },
+            "used-node-filter": {
+              "x": 320,
+              "y": 80
+            }
+          }
+        },
+        "takeaway": "登場人物リストは残し、図だけを場面ごとに軽くしました。"
+      },
+      "comparison": [
+        {
+          "label": "表示対象",
+          "current": "feature ノードを広めに表示",
+          "proposed": "state の interactions に出たノードだけ表示",
+          "note": "背景用の glossary が増えても、図の密度はその場面の説明量に比例します。"
+        }
+      ],
+      "takeaway": "ノード削減は、説明の粒度を保ったまま視線のノイズを落とす変更です。"
+    },
+    {
+      "title": "2. JSON で配置と辺を調整する",
+      "description": "自動配置だけで読みにくい図は、JSON に最小限の描画ヒントを足して整えられます。",
+      "proposedState": {
+        "description": "nodePositions で立ち位置を決め、edge hints で矢印の出入り口と線の種類を指定します。",
+        "storyTitle": "場面: 立ち位置係と動線係が読みやすく整える",
+        "scenes": [
+          {
+            "title": "立ち位置を決める",
+            "actor": "manual-layout",
+            "action": "立ち位置係が nodePositions を読み、指定があるノードをその座標へ置きます。",
+            "result": "重要な流れを左から右、上から下など読みたい順に揃えられます。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "矢印の出入り口を決める",
+            "actor": "edge-hints",
+            "action": "動線係が sourcePosition、targetPosition、edgeType、edgeStyle を edge に反映します。",
+            "result": "辺の交差や戻り線が減り、どこからどこへ渡るかを追いやすくなります。",
+            "interactionFlows": [
+              2,
+              3
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "plan-json",
+            "target": "manual-layout",
+            "label": "座標を指定",
+            "data": "nodePositions",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "edgeType": "straight",
+            "edgeStyle": "bold"
+          },
+          {
+            "flow": 2,
+            "source": "plan-json",
+            "target": "edge-hints",
+            "label": "線の指定を渡す",
+            "data": "edge options",
+            "sourcePosition": "bottom",
+            "targetPosition": "top",
+            "edgeType": "smoothstep",
+            "edgeStyle": "dashed"
+          },
+          {
+            "flow": 3,
+            "source": "edge-hints",
+            "target": "interaction-flow",
+            "label": "描画へ反映",
+            "data": "styled edges",
+            "sourcePosition": "right",
+            "targetPosition": "bottom",
+            "edgeType": "step"
+          }
+        ],
+        "diagram": {
+          "nodePositions": {
+            "plan-json": {
+              "x": 0,
+              "y": 40
+            },
+            "manual-layout": {
+              "x": 330,
+              "y": 0
+            },
+            "edge-hints": {
+              "x": 330,
+              "y": 150
+            },
+            "interaction-flow": {
+              "x": 660,
+              "y": 100
+            }
+          },
+          "edges": {
+            "1": {
+              "sourcePosition": "right",
+              "targetPosition": "left",
+              "type": "straight",
+              "style": "bold"
+            },
+            "2": {
+              "sourcePosition": "bottom",
+              "targetPosition": "left",
+              "type": "smoothstep",
+              "style": "dashed"
+            },
+            "3": {
+              "sourcePosition": "right",
+              "targetPosition": "left",
+              "type": "step"
+            }
+          }
+        },
+        "takeaway": "自動で十分なときはそのまま、読みにくいときだけ JSON で手を添えます。"
+      },
+      "safeguards": [
+        "validator が位置名、線種、未知の glossary id を生成前に検出します。",
+        "interaction-level の指定は diagram.edges より優先されるため、個別の例外を作れます。",
+        "flow 番号キーを使えば、同じ source->target が複数あっても指定が衝突しません。"
+      ]
+    },
+    {
+      "title": "3. 図を必須にしない",
+      "description": "説明だけで十分な章は、interactions を持たない pair/state として表示できます。",
+      "comparison": [
+        {
+          "label": "説明の形式",
+          "current": "図を出す前提で state/interactions を作りがち",
+          "proposed": "比較表、注意点、takeaway だけの章も残せる",
+          "note": "図が説明を助けない場面では、無理にノードと辺を作らない方が読みやすくなります。"
+        },
+        {
+          "label": "画面の動作",
+          "current": "state があると図コンポーネントを呼ぶ流れ",
+          "proposed": "interactions がある state だけ InteractionFlow を呼ぶ",
+          "note": "文章だけの場面でもセクションは残り、空の図は出ません。"
+        }
+      ],
+      "safeguards": [
+        "normalizePlan は説明、比較、safeguards、takeaway、evidence のある pair を残します。",
+        "NarrativePanel は interactions がない state でも story や takeaway を表示できます。"
+      ],
+      "evidence": [
+        {
+          "path": "plan-viewer/src/App.svelte",
+          "startLine": 45,
+          "endLine": 105,
+          "label": "interactions がある時だけ図を描画"
+        },
+        {
+          "path": "plan-viewer/src/utils/normalize.ts",
+          "startLine": 7,
+          "endLine": 33,
+          "label": "説明だけの pair を保持"
+        }
+      ],
+      "takeaway": "図は必須の器ではなく、必要な場面でだけ使う道具になりました。"
+    },
+    {
+      "title": "4. スキル利用者への案内",
+      "description": "SKILL.md と schema.md に、今回の書き方を追加しました。",
+      "proposedState": {
+        "description": "利用者はまず pair を分け、必要な場面だけ interactions を作り、読みにくい図だけ diagram を足します。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "schema-doc",
+            "target": "plan-json",
+            "label": "書き方を案内",
+            "data": "diagram schema",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "edgeType": "smoothstep"
+          },
+          {
+            "flow": 2,
+            "source": "plan-json",
+            "target": "validator",
+            "label": "生成前に検査",
+            "data": "validated plan",
+            "sourcePosition": "right",
+            "targetPosition": "left",
+            "edgeType": "smoothstep",
+            "edgeStyle": "bold"
+          }
+        ],
+        "diagram": {
+          "nodePositions": {
+            "schema-doc": {
+              "x": 0,
+              "y": 80
+            },
+            "plan-json": {
+              "x": 310,
+              "y": 80
+            },
+            "validator": {
+              "x": 620,
+              "y": 80
+            }
+          }
+        },
+        "takeaway": "作成者の基本方針は、先に分割、必要なら図、最後に微調整です。"
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import type { GlossaryItem, GlossaryType } from '../types'
+import type { GlossaryItem, GlossaryType, Interaction } from '../types'
 
 export interface TreeNode {
   item: GlossaryItem
@@ -98,4 +98,17 @@ export function filterGlossary(
 ): GlossaryItem[] {
   if (tab === 'all') return items
   return items.filter((item) => item.type === tab)
+}
+
+/** Keep only glossary items that are directly used by state interactions. */
+export function filterGlossaryToInteractions(
+  items: GlossaryItem[],
+  interactions: Interaction[]
+): GlossaryItem[] {
+  const usedIds = new Set<string>()
+  for (const interaction of interactions) {
+    usedIds.add(interaction.source)
+    usedIds.add(interaction.target)
+  }
+  return items.filter((item) => usedIds.has(item.id))
 }

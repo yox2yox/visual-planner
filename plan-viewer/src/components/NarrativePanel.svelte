@@ -28,7 +28,7 @@
   function flowLabels(state: FlowState, flows?: number[]): string[] {
     if (!flows || flows.length === 0) return []
     return flows
-      .map((flow) => state.interactions.find((interaction) => interaction.flow === flow))
+      .map((flow) => state.interactions?.find((interaction) => interaction.flow === flow))
       .filter((interaction): interaction is NonNullable<typeof interaction> => Boolean(interaction))
       .map((interaction) => {
         const source = actorName(interaction.source) ?? interaction.source

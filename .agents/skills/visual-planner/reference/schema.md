@@ -25,9 +25,10 @@ Reference for the JSON payload consumed by the `viewer/` bundle via the `?plan=<
 ```
 
 Viewer behaviour:
-- If `pairs` is present, it is used. Pairs with neither `currentState` nor `proposedState` are silently dropped.
+- If `pairs` is present, it is used. Pairs with no visible state, comparison, safeguard, takeaway, evidence, or description are silently dropped.
 - Otherwise, if `currentState` and/or `proposedState` are present, they are wrapped into a single untitled pair.
 - If neither is present, only the glossary is rendered.
+- Each state diagram renders only glossary nodes referenced by that state's `interactions[].source` / `interactions[].target`. Unused glossary items stay in the glossary panel but do not appear as extra diagram nodes.
 
 Defining `pairs` together with top-level `currentState`/`proposedState` is a validation error.
 
@@ -79,7 +80,7 @@ external systems, and data concepts that appear as sources, targets, or payloads
 }
 ```
 
-A pair with both `currentState` and `proposedState` omitted is dropped from the rendered output (the pair contributes nothing visible).
+A pair with both `currentState` and `proposedState` omitted can still render comparison, safeguards, takeaway, evidence, and description. If it has none of those, it is dropped from the rendered output.
 
 ### Pair vs. top-level (when to split)
 
@@ -96,7 +97,8 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
 ```jsonc
 {
   "description":  "string — paragraph explaining this snapshot",
-  "interactions": [ /* Interaction[] */ ],
+  "interactions": [ /* Interaction[] — optional; omit or leave empty when no diagram is needed */ ],
+  "diagram":      { /* DiagramOptions — optional manual layout/rendering hints */ },
   "storyTitle":   "string — optional title for the chronological explanation",
   "scenes":       [ /* StoryScene[] — optional kaisetsu-style story */ ],
   "takeaway":     "string — optional state-level one-liner"
@@ -111,13 +113,55 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
   "source": "string — glossary id that initiates the interaction",
   "target": "string — glossary id that receives the interaction",
   "label":  "string — short verb phrase shown on the edge (e.g. 'login request')",
-  "data":   "string — name of the payload / entity flowing on this edge (e.g. 'Credentials')"
+  "data":   "string — name of the payload / entity flowing on this edge (e.g. 'Credentials')",
+
+  "sourcePosition": "top" | "right" | "bottom" | "left",
+  "targetPosition": "top" | "right" | "bottom" | "left",
+  "edgeType":       "default" | "straight" | "step" | "smoothstep",
+  "edgeStyle":      "solid" | "dashed" | "dotted" | "bold",
+  "animated":       "boolean"
 }
 ```
 
 Both `source` and `target` must exist in `glossary[]`.
 `interactions` are the system-flow explanation: read them in `flow` order to understand where the request/input comes from, what processing happens, and what data is handed off to the next participant.
 Within each `State`, `flow` values must be consecutive numbers: `1`, `2`, `3`, ...
+If a state has no `interactions`, the viewer renders its text/narrative but skips the graph for that state.
+
+`sourcePosition`, `targetPosition`, `edgeType`, `edgeStyle`, and `animated` are optional rendering hints. Use them only when the automatic layout makes an important connection hard to follow.
+
+## DiagramOptions
+
+`diagram` is optional and exists only for readability tuning. Omit it when the default diagram is clear enough.
+
+```jsonc
+{
+  "nodePositions": {
+    "client": { "x": 0, "y": 80 },
+    "server": { "x": 280, "y": 80 },
+    "db":     { "x": 560, "y": 80 }
+  },
+  "edges": {
+    "1": {
+      "sourcePosition": "right",
+      "targetPosition": "left",
+      "type": "smoothstep",
+      "style": "bold",
+      "animated": true
+    },
+    "server->db": {
+      "sourcePosition": "right",
+      "targetPosition": "left",
+      "type": "straight",
+      "style": "dashed"
+    }
+  }
+}
+```
+
+- `nodePositions` is keyed by glossary id and uses diagram coordinates in pixels. If any manual positions are present, the diagram uses a flat manual layout for that state; nodes without positions fall back to a simple grid.
+- `edges` is keyed by either the interaction flow number as a string (`"1"`) or by `"source->target"`. Flow-number keys are preferred when multiple edges connect the same nodes.
+- Interaction-level rendering hints override `diagram.edges` for that interaction.
 
 ## Metaphor
 

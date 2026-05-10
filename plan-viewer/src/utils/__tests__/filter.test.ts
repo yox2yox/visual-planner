@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { filterGlossary, buildTree, flattenTree, filterTree } from '../filter'
+import {
+  filterGlossary,
+  buildTree,
+  flattenTree,
+  filterTree,
+  filterGlossaryToInteractions,
+} from '../filter'
 import type { GlossaryItem } from '../../types'
 
 const items: GlossaryItem[] = [
@@ -194,5 +200,19 @@ describe('filterTree', () => {
     const tree = buildTree(noMatch)
     const filtered = filterTree(tree, 'term')
     expect(filtered).toHaveLength(0)
+  })
+})
+
+describe('filterGlossaryToInteractions', () => {
+  it('keeps only nodes referenced as sources or targets', () => {
+    const result = filterGlossaryToInteractions(items, [
+      { flow: 1, source: '1', target: '3', label: 'send', data: 'Payload' },
+    ])
+
+    expect(result.map((item) => item.id)).toEqual(['1', '3'])
+  })
+
+  it('returns empty when a state has no interactions', () => {
+    expect(filterGlossaryToInteractions(items, [])).toHaveLength(0)
   })
 })

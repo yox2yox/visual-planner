@@ -19,6 +19,11 @@ export interface Interaction {
   target: string
   label: string
   data: string
+  sourcePosition?: NodePortPosition
+  targetPosition?: NodePortPosition
+  edgeType?: EdgeRenderType
+  edgeStyle?: EdgeRenderStyle
+  animated?: boolean
 }
 
 export interface EvidenceRef {
@@ -51,7 +56,8 @@ export interface ComparisonRow {
 
 export interface FlowState {
   description?: string
-  interactions: Interaction[]
+  interactions?: Interaction[]
+  diagram?: DiagramOptions
   storyTitle?: string
   scenes?: StoryScene[]
   takeaway?: string
@@ -79,6 +85,28 @@ export interface Plan {
   currentState?: FlowState
   proposedState?: FlowState
   pairs?: StatePair[]
+}
+
+export type NodePortPosition = 'top' | 'right' | 'bottom' | 'left'
+export type EdgeRenderType = 'default' | 'straight' | 'step' | 'smoothstep'
+export type EdgeRenderStyle = 'solid' | 'dashed' | 'dotted' | 'bold'
+
+export interface DiagramNodePosition {
+  x: number
+  y: number
+}
+
+export interface DiagramEdgeOptions {
+  sourcePosition?: NodePortPosition
+  targetPosition?: NodePortPosition
+  type?: EdgeRenderType
+  style?: EdgeRenderStyle
+  animated?: boolean
+}
+
+export interface DiagramOptions {
+  nodePositions?: Record<string, DiagramNodePosition>
+  edges?: Record<string, DiagramEdgeOptions>
 }
 
 export type EdgeDiffStatus = 'added' | 'changed' | 'removed' | 'unchanged'

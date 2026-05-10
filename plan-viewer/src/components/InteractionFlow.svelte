@@ -1,10 +1,23 @@
 <script lang="ts">
-  import { SvelteFlow, Background } from '@xyflow/svelte'
+  import { SvelteFlow, Background, Position } from '@xyflow/svelte'
   import '@xyflow/svelte/dist/style.css'
   import type { Node, Edge } from '@xyflow/svelte'
-  import type { GlossaryItem, Interaction, DiffEdge } from '../types'
+  import type {
+    DiagramEdgeOptions,
+    DiagramOptions,
+    EdgeRenderStyle,
+    GlossaryItem,
+    Interaction,
+    DiffEdge,
+    NodePortPosition,
+  } from '../types'
   import { computeDiffEdges } from '../utils/diff'
-  import { buildTree, flattenTree, type TreeNode } from '../utils/filter'
+  import {
+    buildTree,
+    filterGlossaryToInteractions,
+    flattenTree,
+    type TreeNode,
+  } from '../utils/filter'
   import { selectedGlossaryId } from '../stores'
 
   const MAX_DEPTH = 3
@@ -12,11 +25,18 @@
   interface Props {
     glossary: GlossaryItem[]
     interactions: Interaction[]
+    diagram?: DiagramOptions
     isDiff?: boolean
     baseInteractions?: Interaction[]
   }
 
-  const { glossary, interactions, isDiff = false, baseInteractions = [] }: Props = $props()
+  const {
+    glossary,
+    interactions,
+    diagram,
+    isDiff = false,
+    baseInteractions = [],
+  }: Props = $props()
 
   const NODE_W = 180
   const NODE_H = 60
@@ -27,6 +47,12 @@
   const GROUP_GAP = 60
   const GROUP_HEADER = 30
   const COLS_IN_GROUP = 3
+  const POSITION_MAP: Record<NodePortPosition, Position> = {
+    top: Position.Top,
+    right: Position.Right,
+    bottom: Position.Bottom,
+    left: Position.Left,
+  }
 
   const typeColors: Record<string, string> = {
     term: '#ede9fe',
@@ -72,6 +98,68 @@
     tree: TreeNode[]
   }
 
+  function edgeKey(edge: Pick<Interaction, 'flow' | 'source' | 'target'>): string {
+    return `${edge.source}->${edge.target}`
+  }
+
+  function getDiagramEdgeOptions(edge: Pick<Interaction, 'flow' | 'source' | 'target'>): DiagramEdgeOptions {
+    return diagram?.edges?.[String(edge.flow)] ?? diagram?.edges?.[edgeKey(edge)] ?? {}
+  }
+
+  function nodeSourcePosition(id: string): Position {
+    const interaction = interactions.find((edge) => edge.source === id)
+    const configured = interaction
+      ? interaction.sourcePosition ?? getDiagramEdgeOptions(interaction).sourcePosition
+      : undefined
+    return configured ? POSITION_MAP[configured] : Position.Right
+  }
+
+  function nodeTargetPosition(id: string): Position {
+    const interaction = interactions.find((edge) => edge.target === id)
+    const configured = interaction
+      ? interaction.targetPosition ?? getDiagramEdgeOptions(interaction).targetPosition
+      : undefined
+    return configured ? POSITION_MAP[configured] : Position.Left
+  }
+
+  function makeFlowNode(
+    item: GlossaryItem,
+    position: { x: number; y: number },
+    isSelected: boolean,
+    parentId?: string
+  ): Node {
+    return {
+      id: item.id,
+      position,
+      data: { label: makeNodeLabel(item) },
+      sourcePosition: nodeSourcePosition(item.id),
+      targetPosition: nodeTargetPosition(item.id),
+      style: makeNodeStyle(item, isSelected),
+      ...(parentId ? { parentId } : {}),
+    }
+  }
+
+  function buildManualLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
+    const nodes: Node[] = []
+    const tree = buildTree(items, MAX_DEPTH)
+    let maxY = 0
+
+    items.forEach((item, i) => {
+      const configured = diagram?.nodePositions?.[item.id]
+      const col = i % COLS_IN_GROUP
+      const row = Math.floor(i / COLS_IN_GROUP)
+      const position = configured ?? {
+        x: col * (NODE_W + GAP_X),
+        y: row * (NODE_H + GAP_Y),
+      }
+
+      maxY = Math.max(maxY, position.y + NODE_H)
+      nodes.push(makeFlowNode(item, position, selectedId === item.id))
+    })
+
+    return { nodes, totalHeight: maxY, tree }
+  }
+
   function groupNodeStyle(item: GlossaryItem, width: number, height: number, isSelected: boolean): string {
     return [
       `background: ${groupBgColors[item.type] ?? '#f9fafb'};`,
@@ -101,13 +189,7 @@
       const isSelected = selectedId === treeNode.item.id
 
       if (isLeaf) {
-        nodes.push({
-          id: treeNode.item.id,
-          position,
-          data: { label: makeNodeLabel(treeNode.item) },
-          style: makeNodeStyle(treeNode.item, isSelected),
-          ...(parentId ? { parentId } : {}),
-        })
+        nodes.push(makeFlowNode(treeNode.item, position, isSelected, parentId))
         return { width: NODE_W, height: NODE_H }
       }
 
@@ -122,6 +204,8 @@
         id: treeNode.item.id,
         position,
         data: { label: makeNodeLabel(treeNode.item) },
+        sourcePosition: nodeSourcePosition(treeNode.item.id),
+        targetPosition: nodeTargetPosition(treeNode.item.id),
         style: '',
         zIndex: -1,
         ...(parentId ? { parentId } : {}),
@@ -207,6 +291,13 @@
     return { nodes, totalHeight: yOffset, tree }
   }
 
+  function buildLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
+    if (diagram?.nodePositions && Object.keys(diagram.nodePositions).length > 0) {
+      return buildManualLayout(items, selectedId)
+    }
+    return buildHierarchicalLayout(items, selectedId)
+  }
+
   function edgeStyle(status: DiffEdge['status']): string {
     switch (status) {
       case 'added':
@@ -215,6 +306,19 @@
         return 'stroke: #ca8a04; stroke-width: 3;'
       case 'removed':
         return 'stroke: #dc2626; stroke-width: 2; stroke-dasharray: 6,3;'
+      default:
+        return ''
+    }
+  }
+
+  function renderStyle(style: EdgeRenderStyle | undefined): string {
+    switch (style) {
+      case 'bold':
+        return 'stroke-width: 3;'
+      case 'dashed':
+        return 'stroke-dasharray: 8,4;'
+      case 'dotted':
+        return 'stroke-dasharray: 2,4;'
       default:
         return ''
     }
@@ -235,14 +339,18 @@
             console.warn(`Skipping edge: unknown glossary id (${e.source} → ${e.target})`)
           return valid
         })
-        .map((e) => ({
-          id: `${e.source}-${e.target}-${e.status}`,
+        .map((e) => {
+          const raw = rawInteractions.find((interaction) => interaction.flow === e.flow)
+          const options = getDiagramEdgeOptions(e)
+          return {
+          id: `${e.flow}-${e.source}-${e.target}-${e.status}`,
           source: e.source,
           target: e.target,
           label: `${e.flow}. ${e.label} / ${e.data}`,
-          animated: e.status === 'added',
-          style: edgeStyle(e.status),
-        }))
+          animated: raw?.animated ?? options.animated ?? e.status === 'added',
+          type: raw?.edgeType ?? options.type,
+          style: `${edgeStyle(e.status)} ${renderStyle(raw?.edgeStyle ?? options.style)}`,
+        }})
     }
 
     return rawInteractions
@@ -255,10 +363,13 @@
         return valid
       })
       .map((interaction) => ({
-        id: `${interaction.source}-${interaction.target}`,
+        id: `${interaction.flow}-${interaction.source}-${interaction.target}`,
         source: interaction.source,
         target: interaction.target,
         label: `${interaction.flow}. ${interaction.label} / ${interaction.data}`,
+        animated: interaction.animated ?? getDiagramEdgeOptions(interaction).animated,
+        type: interaction.edgeType ?? getDiagramEdgeOptions(interaction).type,
+        style: renderStyle(interaction.edgeStyle ?? getDiagramEdgeOptions(interaction).style),
       }))
   }
 
@@ -271,7 +382,7 @@
     return unsubscribe
   })
 
-  const featureGlossary = $derived(glossary.filter((g) => g.type === 'feature'))
+  const flowGlossary = $derived(filterGlossaryToInteractions(glossary, interactions))
 
   const diffEdges = $derived(
     isDiff ? computeDiffEdges(baseInteractions, interactions) : null
@@ -280,7 +391,7 @@
   let nodes = $state.raw<Node[]>([])
   let edges = $state.raw<Edge[]>([])
 
-  let layout = $derived(buildHierarchicalLayout(featureGlossary, selectedId))
+  let layout = $derived(buildLayout(flowGlossary, selectedId))
 
   const validIds = $derived(
     new Set(flattenTree(layout.tree).map((n) => n.item.id))

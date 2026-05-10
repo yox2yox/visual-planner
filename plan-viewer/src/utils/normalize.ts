@@ -4,8 +4,16 @@ export interface NormalizedPlan {
   pairs: StatePair[]
 }
 
-function hasAnyState(pair: StatePair): boolean {
-  return pair.currentState !== undefined || pair.proposedState !== undefined
+function hasVisibleContent(pair: StatePair): boolean {
+  return Boolean(
+    pair.currentState !== undefined ||
+      pair.proposedState !== undefined ||
+      pair.description ||
+      pair.comparison?.length ||
+      pair.safeguards?.length ||
+      pair.takeaway ||
+      pair.evidence?.length,
+  )
 }
 
 export function normalizePlan(plan: Plan): NormalizedPlan {
@@ -22,7 +30,7 @@ export function normalizePlan(plan: Plan): NormalizedPlan {
     if (plan.pairs!.length === 0) {
       throw new Error('pairs must not be an empty array')
     }
-    return { pairs: plan.pairs!.filter(hasAnyState) }
+    return { pairs: plan.pairs!.filter(hasVisibleContent) }
   }
 
   if (hasLegacy) {

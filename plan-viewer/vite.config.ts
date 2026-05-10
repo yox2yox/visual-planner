@@ -6,7 +6,7 @@ export default defineConfig({
   base: './',
   plugins: [svelte(), viteSingleFile()],
   build: {
-    outDir: '../.claude/skills/visual-planner/viewer',
+    outDir: '../.agents/skills/visual-planner/viewer',
     emptyOutDir: true,
   },
   test: {
