@@ -7,7 +7,7 @@ const baseGlossary = [{ id: 'a', type: 'server' as const, name: 'A', description
 function makeState(label = 'call') {
   return {
     description: 'desc',
-    interactions: [{ flow: 1, source: 'a', target: 'a', label, data: 'X' }],
+    architectureEdges: [{ order: 1, source: 'a', target: 'a', label, data: 'X' }],
   }
 }
 
@@ -40,8 +40,8 @@ describe('normalizePlan', () => {
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(1)
     expect(result.pairs[0].title).toBe('')
-    expect(result.pairs[0].currentState?.interactions?.[0].label).toBe('old')
-    expect(result.pairs[0].proposedState?.interactions?.[0].label).toBe('new')
+    expect(result.pairs[0].currentState?.architectureEdges?.[0].label).toBe('old')
+    expect(result.pairs[0].proposedState?.architectureEdges?.[0].label).toBe('new')
   })
 
   it('wraps legacy with only currentState', () => {
@@ -53,7 +53,7 @@ describe('normalizePlan', () => {
     }
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(1)
-    expect(result.pairs[0].currentState?.interactions?.[0].label).toBe('only-current')
+    expect(result.pairs[0].currentState?.architectureEdges?.[0].label).toBe('only-current')
     expect(result.pairs[0].proposedState).toBeUndefined()
   })
 

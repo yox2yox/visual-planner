@@ -118,8 +118,8 @@
 </script>
 
 <section class="px-6 py-6">
-  <h2 class="text-xl font-semibold text-gray-800 mb-1">登場人物</h2>
-  <p class="text-sm text-gray-600 mb-4">図に出てくる要素を、人の役割として読めるように並べています。</p>
+  <h2 class="text-xl font-semibold text-gray-800 mb-1">構成要素</h2>
+  <p class="text-sm text-gray-600 mb-4">アーキテクチャ図に出てくる要素を、役割と責務で読めるように並べています。</p>
   <div class="flex gap-2 mb-4 border-b border-gray-200">
     {#each tabs as tab}
       <button
@@ -170,7 +170,7 @@
             <div class="mt-2 ml-7 grid gap-1 text-xs text-gray-700">
               {#if node.item.persona}
                 <p>
-                  <span class="font-semibold">役名:</span>
+                  <span class="font-semibold">設計上の役割:</span>
                   <InlineGlossaryText text={node.item.persona} glossary={items} />
                 </p>
               {/if}

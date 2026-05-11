@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { computeDiffEdges } from '../diff'
-import type { Interaction } from '../../types'
+import type { ArchitectureEdge } from '../../types'
 
-const base: Interaction = { flow: 1, source: 'a', target: 'b', label: 'L', data: 'D' }
+const base: ArchitectureEdge = { order: 1, source: 'a', target: 'b', label: 'L', data: 'D' }
 
 describe('computeDiffEdges', () => {
   it('marks an edge only in proposed as added', () => {
@@ -24,31 +24,31 @@ describe('computeDiffEdges', () => {
   })
 
   it('marks an edge with changed label as changed', () => {
-    const modified: Interaction = { ...base, label: 'New' }
+    const modified: ArchitectureEdge = { ...base, label: 'New' }
     const result = computeDiffEdges([base], [modified])
     expect(result[0].status).toBe('changed')
   })
 
   it('marks an edge with changed data as changed', () => {
-    const modified: Interaction = { ...base, data: 'New' }
+    const modified: ArchitectureEdge = { ...base, data: 'New' }
     const result = computeDiffEdges([base], [modified])
     expect(result[0].status).toBe('changed')
   })
 
-  it('marks an edge with changed flow number as changed', () => {
-    const modified: Interaction = { ...base, flow: 2 }
+  it('marks an edge with changed order number as changed', () => {
+    const modified: ArchitectureEdge = { ...base, order: 2 }
     const result = computeDiffEdges([base], [modified])
     expect(result[0].status).toBe('changed')
   })
 
   it('handles multiple edges with mixed statuses', () => {
-    const current: Interaction[] = [
-      { flow: 1, source: 'a', target: 'b', label: 'L', data: 'D' },
-      { flow: 2, source: 'b', target: 'c', label: 'L2', data: 'D2' },
+    const current: ArchitectureEdge[] = [
+      { order: 1, source: 'a', target: 'b', label: 'L', data: 'D' },
+      { order: 2, source: 'b', target: 'c', label: 'L2', data: 'D2' },
     ]
-    const proposed: Interaction[] = [
-      { flow: 1, source: 'a', target: 'b', label: 'L-new', data: 'D' },
-      { flow: 2, source: 'c', target: 'd', label: 'L3', data: 'D3' },
+    const proposed: ArchitectureEdge[] = [
+      { order: 1, source: 'a', target: 'b', label: 'L-new', data: 'D' },
+      { order: 2, source: 'c', target: 'd', label: 'L3', data: 'D3' },
     ]
     const result = computeDiffEdges(current, proposed)
     const statusMap = Object.fromEntries(

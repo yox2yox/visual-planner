@@ -4,7 +4,7 @@ import {
   buildTree,
   flattenTree,
   filterTree,
-  filterGlossaryToInteractions,
+  filterGlossaryToArchitectureDiagram,
 } from '../filter'
 import type { GlossaryItem } from '../../types'
 
@@ -203,16 +203,16 @@ describe('filterTree', () => {
   })
 })
 
-describe('filterGlossaryToInteractions', () => {
+describe('filterGlossaryToArchitectureDiagram', () => {
   it('keeps only nodes referenced as sources or targets', () => {
-    const result = filterGlossaryToInteractions(items, [
-      { flow: 1, source: '1', target: '3', label: 'send', data: 'Payload' },
+    const result = filterGlossaryToArchitectureDiagram(items, [
+      { order: 1, source: '1', target: '3', label: 'send', data: 'Payload' },
     ])
 
     expect(result.map((item) => item.id)).toEqual(['1', '3'])
   })
 
-  it('returns empty when a state has no interactions', () => {
-    expect(filterGlossaryToInteractions(items, [])).toHaveLength(0)
+  it('returns empty when a state has no architecture edges', () => {
+    expect(filterGlossaryToArchitectureDiagram(items, [])).toHaveLength(0)
   })
 })

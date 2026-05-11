@@ -1,4 +1,4 @@
-import type { GlossaryItem, GlossaryType, Interaction } from '../types'
+import type { ArchitectureEdge, GlossaryItem, GlossaryType } from '../types'
 
 export interface TreeNode {
   item: GlossaryItem
@@ -100,15 +100,15 @@ export function filterGlossary(
   return items.filter((item) => item.type === tab)
 }
 
-/** Keep only glossary items that are directly used by state interactions. */
-export function filterGlossaryToInteractions(
+/** Keep only glossary items that are directly used by a state's architecture diagram. */
+export function filterGlossaryToArchitectureDiagram(
   items: GlossaryItem[],
-  interactions: Interaction[]
+  architectureEdges: ArchitectureEdge[]
 ): GlossaryItem[] {
   const usedIds = new Set<string>()
-  for (const interaction of interactions) {
-    usedIds.add(interaction.source)
-    usedIds.add(interaction.target)
+  for (const edge of architectureEdges) {
+    usedIds.add(edge.source)
+    usedIds.add(edge.target)
   }
   return items.filter((item) => usedIds.has(item.id))
 }

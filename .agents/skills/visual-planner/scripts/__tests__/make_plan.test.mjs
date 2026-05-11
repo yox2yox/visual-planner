@@ -12,13 +12,13 @@ function makePlan(overrides = {}) {
   }
 }
 
-const okEdge = { flow: 1, source: 'a', target: 'b', label: 'calls', data: 'X' }
+const okEdge = { order: 1, source: 'a', target: 'b', label: 'calls', data: 'X' }
 
 describe('validate (make_plan.mjs)', () => {
   it('accepts a plan using the legacy currentState/proposedState', () => {
     const plan = makePlan({
-      currentState: { interactions: [okEdge] },
-      proposedState: { interactions: [okEdge] },
+      currentState: { architectureEdges: [okEdge] },
+      proposedState: { architectureEdges: [okEdge] },
     })
     expect(() => validate(plan)).not.toThrow()
   })
@@ -26,8 +26,8 @@ describe('validate (make_plan.mjs)', () => {
   it('accepts a plan using the new pairs format', () => {
     const plan = makePlan({
       pairs: [
-        { title: 'P1', currentState: { interactions: [okEdge] } },
-        { title: '', proposedState: { interactions: [okEdge] } },
+        { title: 'P1', currentState: { architectureEdges: [okEdge] } },
+        { title: '', proposedState: { architectureEdges: [okEdge] } },
       ],
     })
     expect(() => validate(plan)).not.toThrow()
@@ -52,59 +52,59 @@ describe('validate (make_plan.mjs)', () => {
 
   it('rejects when pairs[i].title is not a string', () => {
     const plan = makePlan({
-      pairs: [{ title: 123, proposedState: { interactions: [okEdge] } }],
+      pairs: [{ title: 123, proposedState: { architectureEdges: [okEdge] } }],
     })
     expect(() => validate(plan)).toThrow(/pairs\[0\]\.title.*string/)
   })
 
   it('rejects when pairs and top-level currentState are both provided', () => {
     const plan = makePlan({
-      currentState: { interactions: [okEdge] },
-      pairs: [{ title: 'P', proposedState: { interactions: [okEdge] } }],
+      currentState: { architectureEdges: [okEdge] },
+      pairs: [{ title: 'P', proposedState: { architectureEdges: [okEdge] } }],
     })
     expect(() => validate(plan)).toThrow(/both.*pairs/i)
   })
 
-  it('rejects when pairs[i].currentState.interactions[j].source is unknown (with path in error)', () => {
+  it('rejects when pairs[i].currentState.architectureEdges[j].source is unknown (with path in error)', () => {
     const plan = makePlan({
       pairs: [
         {
           title: 'P',
           currentState: {
-            interactions: [{ flow: 1, source: 'ghost', target: 'b', label: 'x', data: 'y' }],
+            architectureEdges: [{ order: 1, source: 'ghost', target: 'b', label: 'x', data: 'y' }],
           },
         },
       ],
     })
-    expect(() => validate(plan)).toThrow(/pairs\[0\]\.currentState\.interactions\[0\]\.source/)
+    expect(() => validate(plan)).toThrow(/pairs\[0\]\.currentState\.architectureEdges\[0\]\.source/)
   })
 
-  it('rejects when pairs[i].proposedState.interactions[j].target is unknown (with path in error)', () => {
+  it('rejects when pairs[i].proposedState.architectureEdges[j].target is unknown (with path in error)', () => {
     const plan = makePlan({
       pairs: [
         {
           title: 'P',
           proposedState: {
-            interactions: [{ flow: 1, source: 'a', target: 'ghost', label: 'x', data: 'y' }],
+            architectureEdges: [{ order: 1, source: 'a', target: 'ghost', label: 'x', data: 'y' }],
           },
         },
       ],
     })
-    expect(() => validate(plan)).toThrow(/pairs\[0\]\.proposedState\.interactions\[0\]\.target/)
+    expect(() => validate(plan)).toThrow(/pairs\[0\]\.proposedState\.architectureEdges\[0\]\.target/)
   })
 
-  it('rejects when interactions are not numbered consecutively from 1', () => {
+  it('rejects when architecture edges are not numbered consecutively from 1', () => {
     const plan = makePlan({
       proposedState: {
-        interactions: [
-          { flow: 2, source: 'a', target: 'b', label: 'calls', data: 'X' },
+        architectureEdges: [
+          { order: 2, source: 'a', target: 'b', label: 'calls', data: 'X' },
         ],
       },
     })
-    expect(() => validate(plan)).toThrow(/proposedState\.interactions\[0\]\.flow must be 1/)
+    expect(() => validate(plan)).toThrow(/proposedState\.architectureEdges\[0\]\.order must be 1/)
   })
 
-  it('accepts kaisetsu narrative fields with evidence and scene flow links', () => {
+  it('accepts kaisetsu narrative fields with evidence and scene edge links', () => {
     const plan = makePlan({
       metaphor: { title: '受付カウンター', description: '係員の受け渡しとして読む' },
       takeaway: '受付係が確認して案内係へ渡すだけ。',
@@ -128,7 +128,7 @@ describe('validate (make_plan.mjs)', () => {
           safeguards: ['番号札がない依頼は受け付けない'],
           evidence: [{ path: 'src/flow.ts' }],
           proposedState: {
-            interactions: [okEdge],
+            architectureEdges: [okEdge],
             storyTitle: '受付の流れ',
             scenes: [
               {
@@ -136,7 +136,7 @@ describe('validate (make_plan.mjs)', () => {
                 actor: 'a',
                 action: '受付係が依頼内容を確認して、案内係へ番号札を渡す。',
                 result: '案内係は次に何をすればよいか分かる。',
-                interactionFlows: [1],
+                edgeRefs: [1],
                 evidence: [{ path: 'src/flow.ts', startLine: 3, endLine: 8 }],
               },
             ],
@@ -148,26 +148,26 @@ describe('validate (make_plan.mjs)', () => {
     expect(() => validate(plan)).not.toThrow()
   })
 
-  it('rejects scenes that reference unknown flow numbers', () => {
+  it('rejects scenes that reference unknown architecture edge numbers', () => {
     const plan = makePlan({
       proposedState: {
-        interactions: [okEdge],
+        architectureEdges: [okEdge],
         scenes: [
           {
             title: '場面1',
             action: '受付係が存在しない手順を説明してしまう。',
-            interactionFlows: [2],
+            edgeRefs: [2],
           },
         ],
       },
     })
-    expect(() => validate(plan)).toThrow(/scenes\[0\]\.interactionFlows\[0\]/)
+    expect(() => validate(plan)).toThrow(/scenes\[0\]\.edgeRefs\[0\]/)
   })
 
   it('rejects scenes whose actor is not in the glossary', () => {
     const plan = makePlan({
       proposedState: {
-        interactions: [okEdge],
+        architectureEdges: [okEdge],
         scenes: [
           {
             title: '場面1',

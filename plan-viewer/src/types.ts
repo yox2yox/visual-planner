@@ -21,8 +21,8 @@ export interface GlossaryItem {
   evidence?: EvidenceRef[]
 }
 
-export interface Interaction {
-  flow: number
+export interface ArchitectureEdge {
+  order: number
   source: string
   target: string
   label: string
@@ -51,7 +51,7 @@ export interface StoryScene {
   actor?: string
   action: string
   result?: string
-  interactionFlows?: number[]
+  edgeRefs?: number[]
   evidence?: EvidenceRef[]
 }
 
@@ -64,7 +64,7 @@ export interface ComparisonRow {
 
 export interface FlowState {
   description?: string
-  interactions?: Interaction[]
+  architectureEdges?: ArchitectureEdge[]
   diagram?: DiagramOptions
   storyTitle?: string
   scenes?: StoryScene[]
@@ -120,7 +120,7 @@ export interface DiagramOptions {
 export type EdgeDiffStatus = 'added' | 'changed' | 'removed' | 'unchanged'
 
 export interface DiffEdge {
-  flow: number
+  order: number
   source: string
   target: string
   label: string

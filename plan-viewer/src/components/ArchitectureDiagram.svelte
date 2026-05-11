@@ -7,14 +7,14 @@
     DiagramOptions,
     EdgeRenderStyle,
     GlossaryItem,
-    Interaction,
+    ArchitectureEdge,
     DiffEdge,
     NodePortPosition,
   } from '../types'
   import { computeDiffEdges } from '../utils/diff'
   import {
     buildTree,
-    filterGlossaryToInteractions,
+    filterGlossaryToArchitectureDiagram,
     flattenTree,
     type TreeNode,
   } from '../utils/filter'
@@ -24,18 +24,18 @@
 
   interface Props {
     glossary: GlossaryItem[]
-    interactions: Interaction[]
+    architectureEdges: ArchitectureEdge[]
     diagram?: DiagramOptions
     isDiff?: boolean
-    baseInteractions?: Interaction[]
+    baseArchitectureEdges?: ArchitectureEdge[]
   }
 
   const {
     glossary,
-    interactions,
+    architectureEdges,
     diagram,
     isDiff = false,
-    baseInteractions = [],
+    baseArchitectureEdges = [],
   }: Props = $props()
 
   const NODE_W = 180
@@ -118,31 +118,31 @@
     tree: TreeNode[]
   }
 
-  function edgeKey(edge: Pick<Interaction, 'flow' | 'source' | 'target'>): string {
+  function edgeKey(edge: Pick<ArchitectureEdge, 'order' | 'source' | 'target'>): string {
     return `${edge.source}->${edge.target}`
   }
 
-  function getDiagramEdgeOptions(edge: Pick<Interaction, 'flow' | 'source' | 'target'>): DiagramEdgeOptions {
-    return diagram?.edges?.[String(edge.flow)] ?? diagram?.edges?.[edgeKey(edge)] ?? {}
+  function getDiagramEdgeOptions(edge: Pick<ArchitectureEdge, 'order' | 'source' | 'target'>): DiagramEdgeOptions {
+    return diagram?.edges?.[String(edge.order)] ?? diagram?.edges?.[edgeKey(edge)] ?? {}
   }
 
   function nodeSourcePosition(id: string): Position {
-    const interaction = interactions.find((edge) => edge.source === id)
-    const configured = interaction
-      ? interaction.sourcePosition ?? getDiagramEdgeOptions(interaction).sourcePosition
+    const edge = architectureEdges.find((edge) => edge.source === id)
+    const configured = edge
+      ? edge.sourcePosition ?? getDiagramEdgeOptions(edge).sourcePosition
       : undefined
     return configured ? POSITION_MAP[configured] : Position.Right
   }
 
   function nodeTargetPosition(id: string): Position {
-    const interaction = interactions.find((edge) => edge.target === id)
-    const configured = interaction
-      ? interaction.targetPosition ?? getDiagramEdgeOptions(interaction).targetPosition
+    const edge = architectureEdges.find((edge) => edge.target === id)
+    const configured = edge
+      ? edge.targetPosition ?? getDiagramEdgeOptions(edge).targetPosition
       : undefined
     return configured ? POSITION_MAP[configured] : Position.Left
   }
 
-  function makeFlowNode(
+  function makeArchitectureNode(
     item: GlossaryItem,
     position: { x: number; y: number },
     isSelected: boolean,
@@ -174,7 +174,7 @@
       }
 
       maxY = Math.max(maxY, position.y + NODE_H)
-      nodes.push(makeFlowNode(item, position, selectedId === item.id))
+      nodes.push(makeArchitectureNode(item, position, selectedId === item.id))
     })
 
     return { nodes, totalHeight: maxY, tree }
@@ -209,7 +209,7 @@
       const isSelected = selectedId === treeNode.item.id
 
       if (isLeaf) {
-        nodes.push(makeFlowNode(treeNode.item, position, isSelected, parentId))
+        nodes.push(makeArchitectureNode(treeNode.item, position, isSelected, parentId))
         return { width: NODE_W, height: NODE_H }
       }
 
@@ -346,7 +346,7 @@
 
   function buildEdges(
     validIds: Set<string>,
-    rawInteractions: Interaction[],
+    rawArchitectureEdges: ArchitectureEdge[],
     diffEdges: DiffEdge[] | null
   ): Edge[] {
     const ids = validIds
@@ -356,40 +356,40 @@
         .filter((e) => {
           const valid = ids.has(e.source) && ids.has(e.target)
           if (!valid)
-            console.warn(`Skipping edge: unknown glossary id (${e.source} → ${e.target})`)
+            console.warn(`Skipping architecture edge: unknown glossary id (${e.source} -> ${e.target})`)
           return valid
         })
         .map((e) => {
-          const raw = rawInteractions.find((interaction) => interaction.flow === e.flow)
+          const raw = rawArchitectureEdges.find((edge) => edge.order === e.order)
           const options = getDiagramEdgeOptions(e)
           return {
-          id: `${e.flow}-${e.source}-${e.target}-${e.status}`,
+          id: `${e.order}-${e.source}-${e.target}-${e.status}`,
           source: e.source,
           target: e.target,
-          label: `${e.flow}. ${e.label} / ${e.data}`,
+          label: `${e.order}. ${e.label} / ${e.data}`,
           animated: raw?.animated ?? options.animated ?? e.status === 'added',
           type: raw?.edgeType ?? options.type,
           style: `${edgeStyle(e.status)} ${renderStyle(raw?.edgeStyle ?? options.style)}`,
         }})
     }
 
-    return rawInteractions
-      .filter((interaction) => {
-        const valid = ids.has(interaction.source) && ids.has(interaction.target)
+    return rawArchitectureEdges
+      .filter((edge) => {
+        const valid = ids.has(edge.source) && ids.has(edge.target)
         if (!valid)
           console.warn(
-            `Skipping edge: unknown glossary id (${interaction.source} → ${interaction.target})`
+            `Skipping architecture edge: unknown glossary id (${edge.source} -> ${edge.target})`
           )
         return valid
       })
-      .map((interaction) => ({
-        id: `${interaction.flow}-${interaction.source}-${interaction.target}`,
-        source: interaction.source,
-        target: interaction.target,
-        label: `${interaction.flow}. ${interaction.label} / ${interaction.data}`,
-        animated: interaction.animated ?? getDiagramEdgeOptions(interaction).animated,
-        type: interaction.edgeType ?? getDiagramEdgeOptions(interaction).type,
-        style: renderStyle(interaction.edgeStyle ?? getDiagramEdgeOptions(interaction).style),
+      .map((edge) => ({
+        id: `${edge.order}-${edge.source}-${edge.target}`,
+        source: edge.source,
+        target: edge.target,
+        label: `${edge.order}. ${edge.label} / ${edge.data}`,
+        animated: edge.animated ?? getDiagramEdgeOptions(edge).animated,
+        type: edge.edgeType ?? getDiagramEdgeOptions(edge).type,
+        style: renderStyle(edge.edgeStyle ?? getDiagramEdgeOptions(edge).style),
       }))
   }
 
@@ -402,16 +402,16 @@
     return unsubscribe
   })
 
-  const flowGlossary = $derived(filterGlossaryToInteractions(glossary, interactions))
+  const diagramGlossary = $derived(filterGlossaryToArchitectureDiagram(glossary, architectureEdges))
 
   const diffEdges = $derived(
-    isDiff ? computeDiffEdges(baseInteractions, interactions) : null
+    isDiff ? computeDiffEdges(baseArchitectureEdges, architectureEdges) : null
   )
 
   let nodes = $state.raw<Node[]>([])
   let edges = $state.raw<Edge[]>([])
 
-  let layout = $derived(buildLayout(flowGlossary, selectedId))
+  let layout = $derived(buildLayout(diagramGlossary, selectedId))
 
   const validIds = $derived(
     new Set(flattenTree(layout.tree).map((n) => n.item.id))
@@ -422,15 +422,15 @@
   })
 
   $effect(() => {
-    edges = buildEdges(validIds, interactions, diffEdges)
+    edges = buildEdges(validIds, architectureEdges, diffEdges)
   })
 
-  const flowHeight = $derived(
+  const diagramHeight = $derived(
     Math.max(layout.totalHeight + 100, 300)
   )
 </script>
 
-<div style="height: {flowHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
+<div style="height: {diagramHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
   <SvelteFlow bind:nodes bind:edges fitView elevateNodesOnSelect={false}>
     <Background />
   </SvelteFlow>

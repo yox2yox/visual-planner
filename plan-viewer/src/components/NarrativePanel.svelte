@@ -26,15 +26,15 @@
     return item.persona ?? item.name
   }
 
-  function flowLabels(state: FlowState, flows?: number[]): string[] {
-    if (!flows || flows.length === 0) return []
-    return flows
-      .map((flow) => state.interactions?.find((interaction) => interaction.flow === flow))
-      .filter((interaction): interaction is NonNullable<typeof interaction> => Boolean(interaction))
-      .map((interaction) => {
-        const source = actorName(interaction.source) ?? interaction.source
-        const target = actorName(interaction.target) ?? interaction.target
-        return `${interaction.flow}. ${source} → ${target}: ${interaction.label} / ${interaction.data}`
+  function diagramEdgeLabels(state: FlowState, edgeNumbers?: number[]): string[] {
+    if (!edgeNumbers || edgeNumbers.length === 0) return []
+    return edgeNumbers
+      .map((order) => state.architectureEdges?.find((edge) => edge.order === order))
+      .filter((edge): edge is NonNullable<typeof edge> => Boolean(edge))
+      .map((edge) => {
+        const source = actorName(edge.source) ?? edge.source
+        const target = actorName(edge.target) ?? edge.target
+        return `${edge.order}. ${source} → ${target}: ${edge.label} / ${edge.data}`
       })
   }
 
@@ -58,7 +58,7 @@
   <div class="my-5 space-y-4">
     {#if hasComparison(pair.comparison)}
       <section class="rounded-lg border border-gray-200 bg-white p-4">
-        <h3 class="text-base font-bold text-gray-900">修正前と修正後の見取り図</h3>
+        <h3 class="text-base font-bold text-gray-900">設計変更の要点</h3>
         <div class="mt-3 overflow-x-auto">
           <table class="min-w-full border-collapse text-sm">
             <thead>
@@ -93,8 +93,8 @@
     {/if}
 
     {#each [
-      { label: 'AS-IS のストーリー', state: pair.currentState },
-      { label: 'TO-BE のストーリー', state: pair.proposedState },
+      { label: 'AS-IS の設計説明', state: pair.currentState },
+      { label: 'TO-BE の設計説明', state: pair.proposedState },
     ] as block}
       {#if hasStateNarrative(block.state)}
         <section class="rounded-lg border border-gray-200 bg-white p-4">
@@ -112,7 +112,7 @@
                         <InlineGlossaryText text={scene.title} glossary={glossary} />
                       </p>
                       {#if scene.actor}
-                        <p class="mt-1 text-xs font-medium text-gray-500">主役: {actorName(scene.actor)}</p>
+                        <p class="mt-1 text-xs font-medium text-gray-500">中心要素: {actorName(scene.actor)}</p>
                       {/if}
                       <p class="mt-2 text-sm leading-6 text-gray-700">
                         <InlineGlossaryText text={scene.action} glossary={glossary} />
@@ -122,9 +122,9 @@
                           <InlineGlossaryText text={scene.result} glossary={glossary} />
                         </p>
                       {/if}
-                      {#if flowLabels(block.state, scene.interactionFlows).length}
+                      {#if diagramEdgeLabels(block.state, scene.edgeRefs).length}
                         <ul class="mt-2 space-y-1">
-                          {#each flowLabels(block.state, scene.interactionFlows) as label}
+                          {#each diagramEdgeLabels(block.state, scene.edgeRefs) as label}
                             <li class="text-xs text-gray-600">{label}</li>
                           {/each}
                         </ul>

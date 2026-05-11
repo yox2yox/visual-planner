@@ -4,7 +4,7 @@
   import Header from './components/Header.svelte'
   import GlossaryPanel from './components/GlossaryPanel.svelte'
   import InlineGlossaryText from './components/InlineGlossaryText.svelte'
-  import InteractionFlow from './components/InteractionFlow.svelte'
+  import ArchitectureDiagram from './components/ArchitectureDiagram.svelte'
   import NarrativePanel from './components/NarrativePanel.svelte'
 
   interface LoadResult {
@@ -43,8 +43,8 @@
 
   const { plan, pairs, error } = loadPlan()
 
-  function hasInteractions(state: StatePair['currentState']): boolean {
-    return Boolean(state?.interactions?.length)
+  function hasArchitectureDiagram(state: StatePair['currentState']): boolean {
+    return Boolean(state?.architectureEdges?.length)
   }
 </script>
 
@@ -90,10 +90,10 @@
                   <InlineGlossaryText text={pair.currentState.description} glossary={plan.glossary} />
                 </p>
               {/if}
-              {#if hasInteractions(pair.currentState)}
-                <InteractionFlow
+              {#if hasArchitectureDiagram(pair.currentState)}
+                <ArchitectureDiagram
                   glossary={plan.glossary}
-                  interactions={pair.currentState.interactions ?? []}
+                  architectureEdges={pair.currentState.architectureEdges ?? []}
                   diagram={pair.currentState.diagram}
                 />
               {/if}
@@ -108,13 +108,13 @@
                   <InlineGlossaryText text={pair.proposedState.description} glossary={plan.glossary} />
                 </p>
               {/if}
-              {#if hasInteractions(pair.proposedState)}
-                <InteractionFlow
+              {#if hasArchitectureDiagram(pair.proposedState)}
+                <ArchitectureDiagram
                   glossary={plan.glossary}
-                  interactions={pair.proposedState.interactions ?? []}
+                  architectureEdges={pair.proposedState.architectureEdges ?? []}
                   diagram={pair.proposedState.diagram}
                   isDiff={pair.currentState !== undefined}
-                  baseInteractions={pair.currentState?.interactions ?? []}
+                  baseArchitectureEdges={pair.currentState?.architectureEdges ?? []}
                 />
               {/if}
             </div>

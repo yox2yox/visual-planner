@@ -28,22 +28,22 @@ Viewer behaviour:
 - If `pairs` is present, it is used. Pairs with no visible state, comparison, safeguard, takeaway, evidence, or description are silently dropped.
 - Otherwise, if `currentState` and/or `proposedState` are present, they are wrapped into a single untitled pair.
 - If neither is present, only the glossary is rendered.
-- Each state diagram renders only glossary nodes referenced by that state's `interactions[].source` / `interactions[].target`. Unused glossary items stay in the glossary panel but do not appear as extra diagram nodes.
+- Each state architecture diagram renders only glossary nodes referenced by that state's `architectureEdges[].source` / `architectureEdges[].target`. Unused glossary items stay in the glossary panel but do not appear as extra diagram nodes.
 
 Defining `pairs` together with top-level `currentState`/`proposedState` is a validation error.
 
 ## GlossaryItem
 
-`glossary[]` defines the items needed to explain the numbered flows in `interactions`.
-Use only the granularity required by those flows: request/input origins, processors, data stores,
-external systems, and data concepts that appear as sources, targets, or payloads.
+`glossary[]` defines the items needed to explain the architecture diagrams described by `architectureEdges`.
+Use only the granularity required by those diagrams: components, layers, functions, storage,
+external systems, contracts, and data concepts that appear as sources, targets, or payloads.
 Choose the layer required by the change being explained. A class-local change may only need
 `function` nodes; a cross-boundary architecture change may need `client`, `server`,
 `cloud-service`, `db`, and `table` nodes.
 
 ```jsonc
 {
-  "id":          "string — unique within glossary[]; used by parentId and interactions",
+  "id":          "string — unique within glossary[]; used by parentId and architectureEdges",
   "type":        "term" | "client" | "server" | "cloud-service" | "class" | "function" | "db" | "table",
   "name":        "string — short label shown on the node",
   "description": "string — shown in the detail panel on click",
@@ -94,18 +94,18 @@ A pair with both `currentState` and `proposedState` omitted can still render com
 
 Prefer `pairs` when any of the following apply:
 
-- a single state contains more than ~10 interactions, or
+- a single state contains more than ~10 architecture edges, or
 - a single state touches more than ~10 glossary nodes, or
-- the plan covers multiple independent flows (e.g. login, API call, logout) that make sense on their own diagrams.
+- the plan covers multiple independent design concerns (e.g. auth boundary, API boundary, persistence boundary) that make sense on their own diagrams.
 
-Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting keeps the diagrams readable; cramming everything into one pair (or the legacy top-level form) makes them hard to follow once the plan grows.
+Each pair renders its own AS-IS / TO-BE architecture diagrams under its own header when `architectureEdges` are present. Splitting keeps the diagrams readable; cramming everything into one pair (or the legacy top-level form) makes them hard to follow once the plan grows. If a pair does not need architecture explanation, omit the state diagram and keep the explanation in `description`, `comparison`, `safeguards`, `takeaway`, or `evidence`.
 
 ## State
 
 ```jsonc
 {
   "description":  "string — paragraph explaining this snapshot",
-  "interactions": [ /* Interaction[] — optional; omit or leave empty when no diagram is needed */ ],
+  "architectureEdges": [ /* ArchitectureEdge[] — optional architecture-diagram edges; omit or leave empty when no diagram is needed */ ],
   "diagram":      { /* DiagramOptions — optional manual layout/rendering hints */ },
   "storyTitle":   "string — optional title for the chronological explanation",
   "scenes":       [ /* StoryScene[] — optional kaisetsu-style story */ ],
@@ -113,15 +113,15 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
 }
 ```
 
-## Interaction
+## ArchitectureEdge
 
 ```jsonc
 {
-  "flow":   "number — step number within this state's flow; starts at 1 and increments by 1",
-  "source": "string — glossary id that initiates the interaction",
-  "target": "string — glossary id that receives the interaction",
-  "label":  "string — short verb phrase shown on the edge (e.g. 'login request')",
-  "data":   "string — name of the payload / entity flowing on this edge (e.g. 'Credentials')",
+  "order":  "number — edge number within this state's architecture diagram; starts at 1 and increments by 1",
+  "source": "string — glossary id where the dependency, call, boundary, or handoff starts",
+  "target": "string — glossary id that receives that dependency, call, boundary, or handoff",
+  "label":  "string — short architecture relationship or action phrase shown on the edge (e.g. 'validates token')",
+  "data":   "string — payload, entity, responsibility, contract, or result carried on this edge (e.g. 'AuthToken')",
 
   "sourcePosition": "top" | "right" | "bottom" | "left",
   "targetPosition": "top" | "right" | "bottom" | "left",
@@ -132,15 +132,15 @@ Each pair renders its own AS-IS / TO-BE diagrams under its own header. Splitting
 ```
 
 Both `source` and `target` must exist in `glossary[]`.
-`interactions` are the system-flow explanation: read them in `flow` order to understand where the request/input comes from, what processing happens, and what data is handed off to the next participant.
-Within each `State`, `flow` values must be consecutive numbers: `1`, `2`, `3`, ...
-If a state has no `interactions`, the viewer renders its text/narrative but skips the graph for that state.
+`architectureEdges` are architecture-diagram edges: read them by `order` to understand which pieces exist, how they connect, and why the boundary or handoff matters. They are not required for every pair and should not be used to force a diagram onto explanation-only material.
+Within each `State`, `order` values must be consecutive numbers: `1`, `2`, `3`, ...
+If a state has no `architectureEdges`, the viewer renders its text/narrative but skips the graph for that state.
 
 `sourcePosition`, `targetPosition`, `edgeType`, `edgeStyle`, and `animated` are optional rendering hints. Use them only when the automatic layout makes an important connection hard to follow.
 
 ## DiagramOptions
 
-`diagram` is optional and exists only for readability tuning. Omit it when the default diagram is clear enough.
+`diagram` is optional and exists only for architecture-diagram readability tuning. Omit it when the default diagram is clear enough, and omit the whole `architectureEdges` list when a diagram is not needed.
 
 ```jsonc
 {
@@ -168,8 +168,8 @@ If a state has no `interactions`, the viewer renders its text/narrative but skip
 ```
 
 - `nodePositions` is keyed by glossary id and uses diagram coordinates in pixels. If any manual positions are present, the diagram uses a flat manual layout for that state; nodes without positions fall back to a simple grid.
-- `edges` is keyed by either the interaction flow number as a string (`"1"`) or by `"source->target"`. Flow-number keys are preferred when multiple edges connect the same nodes.
-- Interaction-level rendering hints override `diagram.edges` for that interaction.
+- `edges` is keyed by either the architecture edge order as a string (`"1"`) or by `"source->target"`. Order keys are preferred when multiple edges connect the same nodes.
+- ArchitectureEdge-level rendering hints override `diagram.edges` for that edge.
 
 ## Metaphor
 
@@ -190,12 +190,12 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
   "actor": "string — optional glossary id for the main actor",
   "action": "string — what the actor does in plain language",
   "result": "string — optional result of the scene",
-  "interactionFlows": [1, 2],
+  "edgeRefs": [1, 2],
   "evidence": [ /* EvidenceRef[] */ ]
 }
 ```
 
-`interactionFlows` must reference flow numbers that exist in the same state's `interactions`. Scenes are rendered above the diagram, so the reader gets a story before reading arrows.
+`edgeRefs` must reference architecture edge numbers that exist in the same state's `architectureEdges`. Scenes are rendered above the diagram, so the reader gets the design explanation before reading arrows.
 
 ## ComparisonRow
 
@@ -233,8 +233,8 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
   ],
   "proposedState": {
     "description": "Client calls server.",
-    "interactions": [
-      { "flow": 1, "source": "client", "target": "server", "label": "HTTP GET", "data": "Request" }
+    "architectureEdges": [
+      { "order": 1, "source": "client", "target": "server", "label": "HTTP GET", "data": "Request" }
     ]
   }
 }
@@ -245,7 +245,7 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
 ```json
 {
   "title": "Hello plan",
-  "description": "Two independent flows.",
+  "description": "Two independent design concerns.",
   "glossary": [
     { "id": "client", "type": "client", "name": "Client" },
     { "id": "server", "type": "server", "name": "Server" },
@@ -255,23 +255,23 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
     {
       "title": "Read",
       "proposedState": {
-        "interactions": [
-          { "flow": 1, "source": "client", "target": "server", "label": "GET /item", "data": "ItemID" },
-          { "flow": 2, "source": "server", "target": "db", "label": "SELECT", "data": "ItemID" }
+        "architectureEdges": [
+          { "order": 1, "source": "client", "target": "server", "label": "GET /item", "data": "ItemID" },
+          { "order": 2, "source": "server", "target": "db", "label": "SELECT", "data": "ItemID" }
         ]
       }
     },
     {
       "title": "Write",
       "currentState": {
-        "interactions": [
-          { "flow": 1, "source": "client", "target": "server", "label": "POST /item", "data": "ItemBody" }
+        "architectureEdges": [
+          { "order": 1, "source": "client", "target": "server", "label": "POST /item", "data": "ItemBody" }
         ]
       },
       "proposedState": {
-        "interactions": [
-          { "flow": 1, "source": "client", "target": "server", "label": "PUT /item", "data": "ItemBody" },
-          { "flow": 2, "source": "server", "target": "db", "label": "UPSERT", "data": "ItemRow" }
+        "architectureEdges": [
+          { "order": 1, "source": "client", "target": "server", "label": "PUT /item", "data": "ItemBody" },
+          { "order": 2, "source": "server", "target": "db", "label": "UPSERT", "data": "ItemRow" }
         ]
       }
     }

@@ -161,62 +161,71 @@
             "actor": "login-page",
             "action": "宿泊者がチェックイン用紙として資格情報を入力し、玄関の案内係へ渡す。",
             "result": "案内係は受付係へ本人確認を依頼する。",
-            "interactionFlows": [1, 2]
+            "edgeRefs": [
+              1,
+              2
+            ]
           },
           {
             "title": "場面2: 受付係が本人確認をする",
             "actor": "user-auth",
             "action": "受付係が資格情報検証係とユーザーサービスに確認し、宿泊者が本当に登録済みか調べる。",
             "result": "確認できたら受付側の台帳にセッションを作る準備が整う。",
-            "interactionFlows": [3, 4]
+            "edgeRefs": [
+              3,
+              4
+            ]
           },
           {
             "title": "場面3: 台帳番号をCookieで渡す",
             "actor": "api-gateway",
             "action": "案内係がセッションIDをCookieとして宿泊者のブラウザに渡す。",
             "result": "次回以降、受付側の台帳を見れば誰か分かる。",
-            "interactionFlows": [5, 6]
+            "edgeRefs": [
+              5,
+              6
+            ]
           }
         ],
         "takeaway": "現状は、宿泊者本人よりも受付側の台帳が主役になっている。",
-        "interactions": [
+        "architectureEdges": [
           {
-            "flow": 1,
+            "order": 1,
             "source": "login-page",
             "target": "api-gateway",
             "label": "ログイン要求",
             "data": "Credentials"
           },
           {
-            "flow": 2,
+            "order": 2,
             "source": "api-gateway",
             "target": "user-auth",
             "label": "認証委譲",
             "data": "Credentials"
           },
           {
-            "flow": 3,
+            "order": 3,
             "source": "user-auth",
             "target": "auth-validator",
             "label": "資格検証",
             "data": "Credentials"
           },
           {
-            "flow": 4,
+            "order": 4,
             "source": "user-auth",
             "target": "user-service",
             "label": "ユーザー取得",
             "data": "UserID"
           },
           {
-            "flow": 5,
+            "order": 5,
             "source": "user-auth",
             "target": "api-gateway",
             "label": "セッション発行",
             "data": "SessionID"
           },
           {
-            "flow": 6,
+            "order": 6,
             "source": "api-gateway",
             "target": "http-client",
             "label": "Cookie設定",
@@ -233,69 +242,79 @@
             "actor": "login-page",
             "action": "宿泊者は同じように資格情報を出し、案内係が受付係へ回す。",
             "result": "入口の動線は大きく変えず、内部の役割分担を変える。",
-            "interactionFlows": [1, 2]
+            "edgeRefs": [
+              1,
+              2
+            ]
           },
           {
             "title": "場面2: 確認係と鍵発行係に分かれる",
             "actor": "user-auth",
             "action": "受付係は本人確認を検証係に任せ、確認できたら鍵を作る係へ発行を依頼する。",
             "result": "検証と発行の責任が分かれ、後から見てもどこで何をしているか追いやすい。",
-            "interactionFlows": [3, 4, 5]
+            "edgeRefs": [
+              3,
+              4,
+              5
+            ]
           },
           {
             "title": "場面3: 部屋キーを宿泊者へ渡す",
             "actor": "api-gateway",
             "action": "案内係がJWTをHTTPクライアントへ返し、宿泊者は滞在中の部屋キーとして使う。",
             "result": "次回以降は台帳番号ではなく、鍵そのものを見せて通れる。",
-            "interactionFlows": [6, 7]
+            "edgeRefs": [
+              6,
+              7
+            ]
           }
         ],
         "takeaway": "変更後は、部屋キーを持った宿泊者が自分で身分を示せる。",
-        "interactions": [
+        "architectureEdges": [
           {
-            "flow": 1,
+            "order": 1,
             "source": "login-page",
             "target": "api-gateway",
             "label": "ログイン要求",
             "data": "Credentials"
           },
           {
-            "flow": 2,
+            "order": 2,
             "source": "api-gateway",
             "target": "user-auth",
             "label": "認証委譲",
             "data": "Credentials"
           },
           {
-            "flow": 3,
+            "order": 3,
             "source": "user-auth",
             "target": "auth-validator",
             "label": "資格検証",
             "data": "Credentials"
           },
           {
-            "flow": 4,
+            "order": 4,
             "source": "user-auth",
             "target": "user-service",
             "label": "ユーザー検索",
             "data": "Email"
           },
           {
-            "flow": 5,
+            "order": 5,
             "source": "user-auth",
             "target": "token-issuer",
             "label": "発行要求",
             "data": "UserID"
           },
           {
-            "flow": 6,
+            "order": 6,
             "source": "user-auth",
             "target": "api-gateway",
             "label": "JWT返却",
             "data": "AuthToken"
           },
           {
-            "flow": 7,
+            "order": 7,
             "source": "api-gateway",
             "target": "http-client",
             "label": "JWT配信",
@@ -329,33 +348,38 @@
             "actor": "dashboard",
             "action": "宿泊者がダッシュボードからAPIを呼び、ブラウザがCookieを自動で添える。",
             "result": "案内係はCookieの番号を手がかりに受付台帳を探す。",
-            "interactionFlows": [1, 2]
+            "edgeRefs": [
+              1,
+              2
+            ]
           },
           {
             "title": "場面2: 台帳から利用者を特定する",
             "actor": "api-gateway",
             "action": "案内係がセッションから利用者を確認し、ユーザーサービスへ必要なデータを取りに行く。",
             "result": "サービスは受けられるが、受付台帳への依存が残る。",
-            "interactionFlows": [3]
+            "edgeRefs": [
+              3
+            ]
           }
         ],
-        "interactions": [
+        "architectureEdges": [
           {
-            "flow": 1,
+            "order": 1,
             "source": "dashboard",
             "target": "api-gateway",
             "label": "API呼び出し",
             "data": "Cookie"
           },
           {
-            "flow": 2,
+            "order": 2,
             "source": "api-gateway",
             "target": "session",
             "label": "セッション参照",
             "data": "SessionID"
           },
           {
-            "flow": 3,
+            "order": 3,
             "source": "api-gateway",
             "target": "user-service",
             "label": "データ取得",
@@ -372,34 +396,39 @@
             "actor": "dashboard",
             "action": "ダッシュボードがAuthorizationヘッダにJWTを載せ、案内係へ見せる。",
             "result": "案内係は台帳番号ではなく、カードキーそのものを確認できる。",
-            "interactionFlows": [1]
+            "edgeRefs": [
+              1
+            ]
           },
           {
             "title": "場面2: 署名確認係が鍵を検査する",
             "actor": "token-verifier",
             "action": "トークン検証係がJWTの署名を確認し、正しい鍵かどうか判断する。",
             "result": "正しい鍵なら、ユーザーサービスへ案内できる。",
-            "interactionFlows": [2, 3]
+            "edgeRefs": [
+              2,
+              3
+            ]
           }
         ],
         "takeaway": "API呼び出しは、毎回カードキーを見せて通る形になる。",
-        "interactions": [
+        "architectureEdges": [
           {
-            "flow": 1,
+            "order": 1,
             "source": "dashboard",
             "target": "api-gateway",
             "label": "API呼び出し",
             "data": "Authorization: Bearer"
           },
           {
-            "flow": 2,
+            "order": 2,
             "source": "api-gateway",
             "target": "token-verifier",
             "label": "署名検証",
             "data": "AuthToken"
           },
           {
-            "flow": 3,
+            "order": 3,
             "source": "api-gateway",
             "target": "user-service",
             "label": "データ取得",

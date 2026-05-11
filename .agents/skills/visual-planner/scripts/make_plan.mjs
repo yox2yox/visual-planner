@@ -30,43 +30,43 @@ const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep'])
 const VALID_EDGE_STYLES = new Set(['solid', 'dashed', 'dotted', 'bold'])
 const REQUIRED_TOP_KEYS = ['title', 'glossary']
 
-function validateInteractions(path, state, seen) {
+function validateArchitectureEdges(path, state, seen) {
   if (state == null) return
   if (typeof state !== 'object' || Array.isArray(state)) {
     throw new Error(`${path} must be an object`)
   }
-  if (state.interactions != null && !Array.isArray(state.interactions)) {
-    throw new Error(`${path}.interactions must be an array when present`)
+  if (state.architectureEdges != null && !Array.isArray(state.architectureEdges)) {
+    throw new Error(`${path}.architectureEdges must be an array when present`)
   }
-  const interactions = state.interactions ?? []
-  interactions.forEach((edge, i) => {
-    if (!Number.isInteger(edge?.flow) || edge.flow !== i + 1) {
-      throw new Error(`${path}.interactions[${i}].flow must be ${i + 1}`)
+  const architectureEdges = state.architectureEdges ?? []
+  architectureEdges.forEach((edge, i) => {
+    if (!Number.isInteger(edge?.order) || edge.order !== i + 1) {
+      throw new Error(`${path}.architectureEdges[${i}].order must be ${i + 1}`)
     }
     for (const key of ['source', 'target']) {
       if (!seen.has(edge?.[key])) {
         throw new Error(
-          `${path}.interactions[${i}].${key} references unknown id: ${JSON.stringify(edge?.[key])}`,
+          `${path}.architectureEdges[${i}].${key} references unknown id: ${JSON.stringify(edge?.[key])}`,
         )
       }
     }
     for (const key of ['sourcePosition', 'targetPosition']) {
       if (edge?.[key] != null && !VALID_POSITIONS.has(edge[key])) {
-        throw new Error(`${path}.interactions[${i}].${key} must be one of ${[...VALID_POSITIONS].join(', ')}`)
+        throw new Error(`${path}.architectureEdges[${i}].${key} must be one of ${[...VALID_POSITIONS].join(', ')}`)
       }
     }
     if (edge?.edgeType != null && !VALID_EDGE_TYPES.has(edge.edgeType)) {
-      throw new Error(`${path}.interactions[${i}].edgeType must be one of ${[...VALID_EDGE_TYPES].join(', ')}`)
+      throw new Error(`${path}.architectureEdges[${i}].edgeType must be one of ${[...VALID_EDGE_TYPES].join(', ')}`)
     }
     if (edge?.edgeStyle != null && !VALID_EDGE_STYLES.has(edge.edgeStyle)) {
-      throw new Error(`${path}.interactions[${i}].edgeStyle must be one of ${[...VALID_EDGE_STYLES].join(', ')}`)
+      throw new Error(`${path}.architectureEdges[${i}].edgeStyle must be one of ${[...VALID_EDGE_STYLES].join(', ')}`)
     }
     if (edge?.animated != null && typeof edge.animated !== 'boolean') {
-      throw new Error(`${path}.interactions[${i}].animated must be a boolean`)
+      throw new Error(`${path}.architectureEdges[${i}].animated must be a boolean`)
     }
   })
   validateDiagram(`${path}.diagram`, state.diagram, seen)
-  validateScenes(path, state, interactions, seen)
+  validateScenes(path, state, architectureEdges, seen)
 }
 
 function validateDiagram(path, diagram, seen) {
@@ -92,7 +92,7 @@ function validateDiagram(path, diagram, seen) {
   }
   if (diagram.edges != null) {
     if (!diagram.edges || typeof diagram.edges !== 'object' || Array.isArray(diagram.edges)) {
-      throw new Error(`${path}.edges must be an object keyed by flow number or source->target`)
+      throw new Error(`${path}.edges must be an object keyed by architecture edge order or source->target`)
     }
     for (const [key, options] of Object.entries(diagram.edges)) {
       if (!options || typeof options !== 'object' || Array.isArray(options)) {
@@ -134,10 +134,10 @@ function validateEvidence(path, evidence) {
   })
 }
 
-function validateScenes(path, state, interactions, seen) {
+function validateScenes(path, state, architectureEdges, seen) {
   if (state.scenes == null) return
   if (!Array.isArray(state.scenes)) throw new Error(`${path}.scenes must be an array`)
-  const flows = new Set(interactions.map((interaction) => interaction.flow))
+  const edgeOrders = new Set(architectureEdges.map((edge) => edge.order))
   state.scenes.forEach((scene, i) => {
     if (!scene || typeof scene !== 'object' || Array.isArray(scene)) {
       throw new Error(`${path}.scenes[${i}] must be an object`)
@@ -150,13 +150,13 @@ function validateScenes(path, state, interactions, seen) {
     if (scene.actor != null && !seen.has(scene.actor)) {
       throw new Error(`${path}.scenes[${i}].actor references unknown id: ${JSON.stringify(scene.actor)}`)
     }
-    if (scene.interactionFlows != null) {
-      if (!Array.isArray(scene.interactionFlows)) {
-        throw new Error(`${path}.scenes[${i}].interactionFlows must be an array`)
+    if (scene.edgeRefs != null) {
+      if (!Array.isArray(scene.edgeRefs)) {
+        throw new Error(`${path}.scenes[${i}].edgeRefs must be an array`)
       }
-      scene.interactionFlows.forEach((flow, j) => {
-        if (!flows.has(flow)) {
-          throw new Error(`${path}.scenes[${i}].interactionFlows[${j}] references unknown flow: ${JSON.stringify(flow)}`)
+      scene.edgeRefs.forEach((order, j) => {
+        if (!edgeOrders.has(order)) {
+          throw new Error(`${path}.scenes[${i}].edgeRefs[${j}] references unknown architecture edge order: ${JSON.stringify(order)}`)
         }
       })
     }
@@ -218,12 +218,12 @@ export function validate(plan) {
         throw new Error(`pairs[${i}].title must be a string (got ${typeof pair.title})`)
       }
       validateEvidence(`pairs[${i}]`, pair.evidence)
-      validateInteractions(`pairs[${i}].currentState`, pair.currentState, seen)
-      validateInteractions(`pairs[${i}].proposedState`, pair.proposedState, seen)
+      validateArchitectureEdges(`pairs[${i}].currentState`, pair.currentState, seen)
+      validateArchitectureEdges(`pairs[${i}].proposedState`, pair.proposedState, seen)
     })
   } else {
-    validateInteractions('currentState', plan.currentState, seen)
-    validateInteractions('proposedState', plan.proposedState, seen)
+    validateArchitectureEdges('currentState', plan.currentState, seen)
+    validateArchitectureEdges('proposedState', plan.proposedState, seen)
   }
 }
 
