@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComparisonRow, EvidenceRef, FlowState, GlossaryItem, StatePair } from '../types'
+  import InlineGlossaryText from './InlineGlossaryText.svelte'
 
   interface Props {
     pair: StatePair
@@ -71,10 +72,18 @@
             <tbody>
               {#each pair.comparison ?? [] as row}
                 <tr class="border-b border-gray-100 align-top">
-                  <th class="py-3 pr-4 text-left font-semibold text-gray-900">{row.label}</th>
-                  <td class="py-3 pr-4 text-gray-700">{row.current ?? '-'}</td>
-                  <td class="py-3 pr-4 text-gray-700">{row.proposed ?? '-'}</td>
-                  <td class="py-3 text-gray-600">{row.note ?? '-'}</td>
+                  <th class="py-3 pr-4 text-left font-semibold text-gray-900">
+                    <InlineGlossaryText text={row.label} glossary={glossary} />
+                  </th>
+                  <td class="py-3 pr-4 text-gray-700">
+                    <InlineGlossaryText text={row.current ?? '-'} glossary={glossary} />
+                  </td>
+                  <td class="py-3 pr-4 text-gray-700">
+                    <InlineGlossaryText text={row.proposed ?? '-'} glossary={glossary} />
+                  </td>
+                  <td class="py-3 text-gray-600">
+                    <InlineGlossaryText text={row.note ?? '-'} glossary={glossary} />
+                  </td>
                 </tr>
               {/each}
             </tbody>
@@ -99,13 +108,19 @@
                       {i + 1}
                     </span>
                     <div class="min-w-0 flex-1">
-                      <p class="font-semibold text-gray-900">{scene.title}</p>
+                      <p class="font-semibold text-gray-900">
+                        <InlineGlossaryText text={scene.title} glossary={glossary} />
+                      </p>
                       {#if scene.actor}
                         <p class="mt-1 text-xs font-medium text-gray-500">主役: {actorName(scene.actor)}</p>
                       {/if}
-                      <p class="mt-2 text-sm leading-6 text-gray-700">{scene.action}</p>
+                      <p class="mt-2 text-sm leading-6 text-gray-700">
+                        <InlineGlossaryText text={scene.action} glossary={glossary} />
+                      </p>
                       {#if scene.result}
-                        <p class="mt-1 text-sm leading-6 text-gray-600">{scene.result}</p>
+                        <p class="mt-1 text-sm leading-6 text-gray-600">
+                          <InlineGlossaryText text={scene.result} glossary={glossary} />
+                        </p>
                       {/if}
                       {#if flowLabels(block.state, scene.interactionFlows).length}
                         <ul class="mt-2 space-y-1">
@@ -131,7 +146,9 @@
             </ol>
           {/if}
           {#if block.state?.takeaway}
-            <p class="mt-3 rounded-md bg-slate-50 p-3 text-sm font-semibold leading-6 text-gray-900">{block.state.takeaway}</p>
+            <p class="mt-3 rounded-md bg-slate-50 p-3 text-sm font-semibold leading-6 text-gray-900">
+              <InlineGlossaryText text={block.state.takeaway} glossary={glossary} />
+            </p>
           {/if}
         </section>
       {/if}
@@ -144,7 +161,9 @@
             <h3 class="text-sm font-bold text-emerald-900">細かいけど大事な仕組み</h3>
             <ul class="mt-2 space-y-1">
               {#each pair.safeguards as item}
-                <li class="text-sm leading-6 text-emerald-950">{item}</li>
+                <li class="text-sm leading-6 text-emerald-950">
+                  <InlineGlossaryText text={item} glossary={glossary} />
+                </li>
               {/each}
             </ul>
           </div>
@@ -165,7 +184,9 @@
         {#if pair.takeaway}
           <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h3 class="text-sm font-bold text-gray-900">ひと言で</h3>
-            <p class="mt-2 text-sm font-semibold leading-6 text-gray-900">{pair.takeaway}</p>
+            <p class="mt-2 text-sm font-semibold leading-6 text-gray-900">
+              <InlineGlossaryText text={pair.takeaway} glossary={glossary} />
+            </p>
           </div>
         {/if}
       </section>

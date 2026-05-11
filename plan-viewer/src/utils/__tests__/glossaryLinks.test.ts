@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest'
+import { get } from 'svelte/store'
+import { render } from 'svelte/server'
+import InlineGlossaryText from '../../components/InlineGlossaryText.svelte'
+import { selectedGlossaryId } from '../../stores'
+import type { GlossaryItem } from '../../types'
+import { getGlossaryAncestorIds, parseGlossaryLinks } from '../glossaryLinks'
+
+const glossary: GlossaryItem[] = [
+  { id: 'root', type: 'feature', name: 'Root', description: '' },
+  { id: 'child', type: 'term', name: 'Child', description: '', parentId: 'root' },
+  { id: 'leaf', type: 'data', name: 'Leaf', description: '', parentId: 'child' },
+]
+
+const ids = new Set(glossary.map((item) => item.id))
+
+describe('parseGlossaryLinks', () => {
+  it('recognizes only exact glossary anchor syntax', () => {
+    expect(parseGlossaryLinks('See <a href="#glossary:child">child</a>.', ids)).toEqual([
+      { type: 'text', text: 'See ' },
+      { type: 'glossary-link', id: 'child', label: 'child' },
+      { type: 'text', text: '.' },
+    ])
+
+    expect(parseGlossaryLinks('<A href="#glossary:child">child</A>', ids)).toEqual([
+      { type: 'text', text: '<A href="#glossary:child">child</A>' },
+    ])
+    expect(parseGlossaryLinks("<a href='#glossary:child'>child</a>", ids)).toEqual([
+      { type: 'text', text: "<a href='#glossary:child'>child</a>" },
+    ])
+    expect(parseGlossaryLinks('<a data-x="#glossary:child">child</a>', ids)).toEqual([
+      { type: 'text', text: '<a data-x="#glossary:child">child</a>' },
+    ])
+  })
+
+  it('renders missing targets and empty targets as plain labels', () => {
+    expect(parseGlossaryLinks('<a href="#glossary:missing">missing label</a>', ids)).toEqual([
+      { type: 'text', text: 'missing label' },
+    ])
+    expect(parseGlossaryLinks('<a href="#glossary:">empty label</a>', ids)).toEqual([
+      { type: 'text', text: 'empty label' },
+    ])
+  })
+
+  it('keeps unsupported tags and malformed anchors literal', () => {
+    expect(parseGlossaryLinks('<strong>literal</strong>', ids)).toEqual([
+      { type: 'text', text: '<strong>literal</strong>' },
+    ])
+    expect(parseGlossaryLinks('<a href="#glossary:child">no close', ids)).toEqual([
+      { type: 'text', text: '<a href="#glossary:child">no close' },
+    ])
+    expect(parseGlossaryLinks('<a href="#other:child">wrong prefix</a>', ids)).toEqual([
+      { type: 'text', text: '<a href="#other:child">wrong prefix</a>' },
+    ])
+  })
+
+  it('does not interpret nested tags in labels as HTML', () => {
+    expect(parseGlossaryLinks('<a href="#glossary:child"><em>Child</em></a>', ids)).toEqual([
+      { type: 'glossary-link', id: 'child', label: '<em>Child</em>' },
+    ])
+  })
+})
+
+describe('InlineGlossaryText', () => {
+  it('renders valid targets as controlled buttons and missing targets as plain text', () => {
+    const { body } = render(InlineGlossaryText, {
+      props: {
+        text: 'Open <a href="#glossary:child">child</a> and <a href="#glossary:missing">missing</a>.',
+        glossary,
+      },
+    })
+
+    expect(body).toContain('<button')
+    expect(body).toContain('child')
+    expect(body).toContain('missing')
+    expect(body).not.toContain('href="#glossary:child"')
+    expect(body).not.toContain('href="#glossary:missing"')
+  })
+
+  it('escapes nested tags in labels instead of injecting HTML', () => {
+    const { body } = render(InlineGlossaryText, {
+      props: {
+        text: '<a href="#glossary:child"><em>Child</em></a>',
+        glossary,
+      },
+    })
+
+    expect(body).toContain('&lt;em>Child&lt;/em>')
+    expect(body).not.toContain('<em>Child</em>')
+  })
+})
+
+describe('glossary link selection helpers', () => {
+  it('can update the selected glossary store for a clicked valid link', () => {
+    selectedGlossaryId.set(null)
+    selectedGlossaryId.set('child')
+    expect(get(selectedGlossaryId)).toBe('child')
+  })
+
+  it('finds collapsed ancestors that must be expanded before scrolling', () => {
+    expect(getGlossaryAncestorIds('leaf', glossary)).toEqual(['child', 'root'])
+  })
+})

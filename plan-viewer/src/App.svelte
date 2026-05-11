@@ -3,6 +3,7 @@
   import type { Plan, StatePair } from './types'
   import Header from './components/Header.svelte'
   import GlossaryPanel from './components/GlossaryPanel.svelte'
+  import InlineGlossaryText from './components/InlineGlossaryText.svelte'
   import InteractionFlow from './components/InteractionFlow.svelte'
   import NarrativePanel from './components/NarrativePanel.svelte'
 
@@ -62,6 +63,7 @@
       metaphor={plan.metaphor}
       takeaway={plan.takeaway}
       evidence={plan.evidence}
+      glossary={plan.glossary}
     />
 
     <main class="max-w-7xl mx-auto">
@@ -73,7 +75,9 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-1">{pair.title}</h2>
           {/if}
           {#if pair.description}
-            <p class="text-gray-600 text-sm mb-4">{pair.description}</p>
+            <p class="text-gray-600 text-sm mb-4">
+              <InlineGlossaryText text={pair.description} glossary={plan.glossary} />
+            </p>
           {/if}
 
           <NarrativePanel pair={pair} glossary={plan.glossary} />
@@ -82,7 +86,9 @@
             <div class="mt-4">
               <h3 class="text-lg font-semibold text-gray-800 mb-1">AS-IS（現状）</h3>
               {#if pair.currentState.description}
-                <p class="text-gray-600 text-sm mb-4">{pair.currentState.description}</p>
+                <p class="text-gray-600 text-sm mb-4">
+                  <InlineGlossaryText text={pair.currentState.description} glossary={plan.glossary} />
+                </p>
               {/if}
               {#if hasInteractions(pair.currentState)}
                 <InteractionFlow
@@ -98,7 +104,9 @@
             <div class="mt-6">
               <h3 class="text-lg font-semibold text-gray-800 mb-1">TO-BE（変更後）</h3>
               {#if pair.proposedState.description}
-                <p class="text-gray-600 text-sm mb-4">{pair.proposedState.description}</p>
+                <p class="text-gray-600 text-sm mb-4">
+                  <InlineGlossaryText text={pair.proposedState.description} glossary={plan.glossary} />
+                </p>
               {/if}
               {#if hasInteractions(pair.proposedState)}
                 <InteractionFlow
