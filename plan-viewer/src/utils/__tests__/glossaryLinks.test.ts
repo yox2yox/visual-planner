@@ -8,7 +8,7 @@ import { getGlossaryAncestorIds, parseGlossaryLinks } from '../glossaryLinks'
 
 const glossary: GlossaryItem[] = [
   { id: 'root', type: 'feature', name: 'Root', description: '' },
-  { id: 'child', type: 'term', name: 'Child', description: '', parentId: 'root' },
+  { id: 'child', type: 'term', name: 'Child', description: 'Child glossary description', parentId: 'root' },
   { id: 'leaf', type: 'data', name: 'Leaf', description: '', parentId: 'child' },
 ]
 
@@ -75,6 +75,7 @@ describe('InlineGlossaryText', () => {
     expect(body).toContain('missing')
     expect(body).not.toContain('href="#glossary:child"')
     expect(body).not.toContain('href="#glossary:missing"')
+    expect(body).not.toContain('Child glossary description')
   })
 
   it('escapes nested tags in labels instead of injecting HTML', () => {
