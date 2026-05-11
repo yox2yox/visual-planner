@@ -69,11 +69,13 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
    - `pairs` and top-level `currentState`/`proposedState` are mutually exclusive — pick one form
    - every `scenes[].interactionFlows[]` references an existing `interactions[].flow` in the same state
    - every `evidence[]` item has a `path`; include `startLine` / `endLine` when known
+   - every prose occurrence of a term defined in `glossary[]` is linked with `<a href="#glossary:ID">label</a>` unless it appears in a field that does not support glossary links
 
 ## Kaisetsu-style authoring rules
 
 - Pick one metaphor first and keep it to the end. Do not mix "restaurant", "factory", and "post office" in the same plan.
 - Make the glossary an actor list, not a dry dictionary. Names can stay technical, but `persona`, `analogy`, and `responsibility` should translate them into human roles.
+- Whenever prose uses a `glossary[]` item name or a clearly equivalent term, always link it to that glossary item using the exact syntax `<a href="#glossary:ID">label</a>`. This applies to all text fields that support glossary links, including descriptions, scenes, comparison text, safeguards, takeaways, and glossary card text.
 - Write scenes in time order. Prefer "受付係がチケットを確認する" over "validation occurs".
 - Put the story before the graph in the reader's mental model: the viewer renders narrative panels above each diagram, so the graph becomes confirmation rather than the first obstacle.
 - When explaining a change, include a `comparison` table and at least one "why the simple alternative is not enough" note in `comparison[].note` or `safeguards[]` when relevant.
