@@ -28,9 +28,10 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
    - `title`, `description` — one-line and paragraph summary
    - `metaphor` — one physical, everyday metaphor that can carry the whole plan without changing midstream.
    - `takeaway` — the "ひと言で" summary the reader should remember.
-   - `glossary[]` — the nodes (features / data / terms) that are needed to explain the flows in `interactions`.
+   - `glossary[]` — the nodes (architecture elements and terms) that are needed to explain the flows in `interactions`.
      Give each a stable `id`. Use `parentId` to nest (max 3 levels; deeper levels are dropped by the viewer).
-     Define glossary items only at the granularity needed for the flow: request/input sources, processors, data stores, external systems, and data concepts that appear in the interaction steps.
+     Define glossary items only at the layer needed for the change: a class-local change may only need functions/methods, while a client/server/cloud/DB change should show those layers explicitly.
+     Use `client` for user-facing clients such as browsers, `server` for server-side systems, `cloud-service` for S3/Lambda-style managed services, `class` for object-oriented classes, `function` for functions or class methods, `db` for databases, `table` for database tables, and `term` for concepts that do not fit those structural types.
      For every important item, add kaisetsu fields:
      - `persona` — role-name as a person (e.g. "受付係", "記録係", "案内係")
      - `analogy` — what this item is in the metaphor world
@@ -64,7 +65,7 @@ Not for: generating code, writing docs, or anything that doesn't boil down to pr
    - when `interactions` exists, every `interactions[].flow` is a consecutive number starting at `1` within that state
    - optional diagram positions reference existing glossary ids
    - optional edge positions/types/styles use the values listed in `reference/schema.md`
-   - `type` is one of `term` | `feature` | `data`
+   - `type` is one of `term` | `client` | `server` | `cloud-service` | `class` | `function` | `db` | `table`
    - `pairs` and top-level `currentState`/`proposedState` are mutually exclusive — pick one form
    - every `scenes[].interactionFlows[]` references an existing `interactions[].flow` in the same state
    - every `evidence[]` item has a `path`; include `startLine` / `endLine` when known
@@ -121,8 +122,8 @@ Minimum viable plan (single-pair shortcut):
   "title": "…",
   "description": "…",
   "glossary": [
-    { "id": "a", "type": "feature", "name": "A" },
-    { "id": "b", "type": "feature", "name": "B" }
+    { "id": "a", "type": "client", "name": "A" },
+    { "id": "b", "type": "server", "name": "B" }
   ],
   "proposedState": {
     "description": "…",

@@ -1,4 +1,12 @@
-export type GlossaryType = 'term' | 'feature' | 'data'
+export type GlossaryType =
+  | 'term'
+  | 'client'
+  | 'server'
+  | 'cloud-service'
+  | 'class'
+  | 'function'
+  | 'db'
+  | 'table'
 
 export interface GlossaryItem {
   id: string

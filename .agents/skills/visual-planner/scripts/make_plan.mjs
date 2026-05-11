@@ -15,7 +15,16 @@ import { readFileSync, existsSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-const VALID_TYPES = new Set(['term', 'feature', 'data'])
+const VALID_TYPES = new Set([
+  'term',
+  'client',
+  'server',
+  'cloud-service',
+  'class',
+  'function',
+  'db',
+  'table',
+])
 const VALID_POSITIONS = new Set(['top', 'right', 'bottom', 'left'])
 const VALID_EDGE_TYPES = new Set(['default', 'straight', 'step', 'smoothstep'])
 const VALID_EDGE_STYLES = new Set(['solid', 'dashed', 'dotted', 'bold'])

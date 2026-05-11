@@ -10,8 +10,8 @@ import type { GlossaryItem } from '../../types'
 
 const items: GlossaryItem[] = [
   { id: '1', type: 'term', name: 'Term A', description: '' },
-  { id: '2', type: 'feature', name: 'Feature B', description: '' },
-  { id: '3', type: 'data', name: 'Data C', description: '' },
+  { id: '2', type: 'server', name: 'Server B', description: '' },
+  { id: '3', type: 'table', name: 'Table C', description: '' },
   { id: '4', type: 'term', name: 'Term D', description: '' },
 ]
 
@@ -26,14 +26,14 @@ describe('filterGlossary', () => {
     expect(result.every((i) => i.type === 'term')).toBe(true)
   })
 
-  it('filters by feature', () => {
-    const result = filterGlossary(items, 'feature')
+  it('filters by server', () => {
+    const result = filterGlossary(items, 'server')
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('2')
   })
 
-  it('filters by data', () => {
-    const result = filterGlossary(items, 'data')
+  it('filters by table', () => {
+    const result = filterGlossary(items, 'table')
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('3')
   })
@@ -53,9 +53,9 @@ describe('buildTree', () => {
 
   it('builds hierarchy with parentId', () => {
     const hierarchical: GlossaryItem[] = [
-      { id: 'root', type: 'feature', name: 'Root', description: '' },
+      { id: 'root', type: 'server', name: 'Root', description: '' },
       { id: 'child1', type: 'term', name: 'Child 1', description: '', parentId: 'root' },
-      { id: 'child2', type: 'data', name: 'Child 2', description: '', parentId: 'root' },
+      { id: 'child2', type: 'table', name: 'Child 2', description: '', parentId: 'root' },
       { id: 'grandchild', type: 'term', name: 'Grandchild', description: '', parentId: 'child1' },
     ]
     const tree = buildTree(hierarchical)
@@ -99,10 +99,10 @@ describe('buildTree', () => {
 
   describe('maxDepth', () => {
     const fourLevels: GlossaryItem[] = [
-      { id: 'l0', type: 'feature', name: 'L0', description: '' },
-      { id: 'l1', type: 'feature', name: 'L1', description: '', parentId: 'l0' },
-      { id: 'l2', type: 'feature', name: 'L2', description: '', parentId: 'l1' },
-      { id: 'l3', type: 'feature', name: 'L3', description: '', parentId: 'l2' },
+      { id: 'l0', type: 'server', name: 'L0', description: '' },
+      { id: 'l1', type: 'class', name: 'L1', description: '', parentId: 'l0' },
+      { id: 'l2', type: 'function', name: 'L2', description: '', parentId: 'l1' },
+      { id: 'l3', type: 'function', name: 'L3', description: '', parentId: 'l2' },
     ]
 
     it('defaults to 3 levels and excludes depth-3 items from flattened tree', () => {
@@ -154,9 +154,9 @@ describe('buildTree', () => {
 describe('flattenTree', () => {
   it('flattens tree preserving depth-first order', () => {
     const hierarchical: GlossaryItem[] = [
-      { id: 'root', type: 'feature', name: 'Root', description: '' },
+      { id: 'root', type: 'server', name: 'Root', description: '' },
       { id: 'child1', type: 'term', name: 'Child 1', description: '', parentId: 'root' },
-      { id: 'child2', type: 'data', name: 'Child 2', description: '', parentId: 'root' },
+      { id: 'child2', type: 'table', name: 'Child 2', description: '', parentId: 'root' },
       { id: 'grandchild', type: 'term', name: 'Grandchild', description: '', parentId: 'child1' },
     ]
     const tree = buildTree(hierarchical)
@@ -171,9 +171,9 @@ describe('flattenTree', () => {
 
 describe('filterTree', () => {
   const hierarchical: GlossaryItem[] = [
-    { id: 'root', type: 'feature', name: 'Root', description: '' },
+    { id: 'root', type: 'server', name: 'Root', description: '' },
     { id: 'child1', type: 'term', name: 'Child 1', description: '', parentId: 'root' },
-    { id: 'child2', type: 'data', name: 'Child 2', description: '', parentId: 'root' },
+    { id: 'child2', type: 'table', name: 'Child 2', description: '', parentId: 'root' },
   ]
 
   it('returns full tree for "all" tab', () => {
@@ -194,8 +194,8 @@ describe('filterTree', () => {
 
   it('removes branches with no matching descendants', () => {
     const noMatch: GlossaryItem[] = [
-      { id: 'root', type: 'feature', name: 'Root', description: '' },
-      { id: 'child', type: 'feature', name: 'Child', description: '', parentId: 'root' },
+      { id: 'root', type: 'server', name: 'Root', description: '' },
+      { id: 'child', type: 'class', name: 'Child', description: '', parentId: 'root' },
     ]
     const tree = buildTree(noMatch)
     const filtered = filterTree(tree, 'term')

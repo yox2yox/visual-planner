@@ -56,23 +56,43 @@
 
   const typeColors: Record<string, string> = {
     term: '#ede9fe',
-    feature: '#dbeafe',
-    data: '#dcfce7',
+    client: '#e0f2fe',
+    server: '#dbeafe',
+    'cloud-service': '#cffafe',
+    class: '#fef3c7',
+    function: '#ffedd5',
+    db: '#d1fae5',
+    table: '#ccfbf1',
   }
   const typeBorderColors: Record<string, string> = {
     term: '#7c3aed',
-    feature: '#2563eb',
-    data: '#16a34a',
+    client: '#0284c7',
+    server: '#2563eb',
+    'cloud-service': '#0891b2',
+    class: '#d97706',
+    function: '#ea580c',
+    db: '#059669',
+    table: '#0d9488',
   }
   const groupBgColors: Record<string, string> = {
     term: '#f5f3ff',
-    feature: '#eff6ff',
-    data: '#f0fdf4',
+    client: '#f0f9ff',
+    server: '#eff6ff',
+    'cloud-service': '#ecfeff',
+    class: '#fffbeb',
+    function: '#fff7ed',
+    db: '#ecfdf5',
+    table: '#f0fdfa',
   }
   const defaultIcons: Record<string, string> = {
     term: '📖',
-    feature: '⚡',
-    data: '💾',
+    client: '💻',
+    server: '🖥️',
+    'cloud-service': '☁️',
+    class: '📦',
+    function: 'ƒ',
+    db: '🗄️',
+    table: '▦',
   }
 
   function makeNodeStyle(item: GlossaryItem, isSelected: boolean): string {

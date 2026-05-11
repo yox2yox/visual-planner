@@ -17,32 +17,57 @@
   const tabs: { value: Tab; label: string }[] = [
     { value: 'all', label: 'すべて' },
     { value: 'term', label: '📖 用語' },
-    { value: 'feature', label: '⚡ 機能' },
-    { value: 'data', label: '💾 データ' },
+    { value: 'client', label: '💻 クライアント' },
+    { value: 'server', label: '🖥️ サーバー' },
+    { value: 'cloud-service', label: '☁️ クラウドサービス' },
+    { value: 'class', label: '📦 クラス' },
+    { value: 'function', label: 'ƒ 関数' },
+    { value: 'db', label: '🗄️ DB' },
+    { value: 'table', label: '▦ テーブル' },
   ]
 
   const defaultIcons: Record<GlossaryType, string> = {
     term: '📖',
-    feature: '⚡',
-    data: '💾',
+    client: '💻',
+    server: '🖥️',
+    'cloud-service': '☁️',
+    class: '📦',
+    function: 'ƒ',
+    db: '🗄️',
+    table: '▦',
   }
 
   const typeColors: Record<GlossaryType, string> = {
     term: 'bg-purple-100 text-purple-800 border-purple-200',
-    feature: 'bg-blue-100 text-blue-800 border-blue-200',
-    data: 'bg-green-100 text-green-800 border-green-200',
+    client: 'bg-sky-100 text-sky-800 border-sky-200',
+    server: 'bg-blue-100 text-blue-800 border-blue-200',
+    'cloud-service': 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    class: 'bg-amber-100 text-amber-800 border-amber-200',
+    function: 'bg-orange-100 text-orange-800 border-orange-200',
+    db: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    table: 'bg-teal-100 text-teal-800 border-teal-200',
   }
 
   const typeBadgeColors: Record<GlossaryType, string> = {
     term: 'bg-purple-100 text-purple-700',
-    feature: 'bg-blue-100 text-blue-700',
-    data: 'bg-green-100 text-green-700',
+    client: 'bg-sky-100 text-sky-700',
+    server: 'bg-blue-100 text-blue-700',
+    'cloud-service': 'bg-cyan-100 text-cyan-700',
+    class: 'bg-amber-100 text-amber-700',
+    function: 'bg-orange-100 text-orange-700',
+    db: 'bg-emerald-100 text-emerald-700',
+    table: 'bg-teal-100 text-teal-700',
   }
 
   const typeLabels: Record<GlossaryType, string> = {
     term: '用語',
-    feature: '機能',
-    data: 'データ',
+    client: 'クライアント',
+    server: 'サーバー',
+    'cloud-service': 'クラウドサービス',
+    class: 'クラス',
+    function: '関数',
+    db: 'DB',
+    table: 'テーブル',
   }
 
   let tree = $derived(buildTree(items))

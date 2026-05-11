@@ -7,9 +7,9 @@ import type { GlossaryItem } from '../../types'
 import { getGlossaryAncestorIds, parseGlossaryLinks } from '../glossaryLinks'
 
 const glossary: GlossaryItem[] = [
-  { id: 'root', type: 'feature', name: 'Root', description: '' },
+  { id: 'root', type: 'server', name: 'Root', description: '' },
   { id: 'child', type: 'term', name: 'Child', description: 'Child glossary description', parentId: 'root' },
-  { id: 'leaf', type: 'data', name: 'Leaf', description: '', parentId: 'child' },
+  { id: 'leaf', type: 'table', name: 'Leaf', description: '', parentId: 'child' },
 ]
 
 const ids = new Set(glossary.map((item) => item.id))

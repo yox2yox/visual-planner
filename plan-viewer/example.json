@@ -9,7 +9,7 @@
   "glossary": [
     {
       "id": "backend",
-      "type": "feature",
+      "type": "server",
       "name": "バックエンド",
       "description": "サーバーサイドの処理を担当するレイヤー",
       "icon": "🖥️",
@@ -19,7 +19,7 @@
     },
     {
       "id": "user-auth",
-      "type": "feature",
+      "type": "class",
       "name": "ユーザー認証",
       "description": "ログイン・ログアウト・パスワードリセットを担当するモジュール",
       "icon": "🔐",
@@ -30,7 +30,7 @@
     },
     {
       "id": "auth-validator",
-      "type": "feature",
+      "type": "function",
       "name": "資格情報検証",
       "description": "パスワードハッシュの照合など、クレデンシャルの検証を専任で行うサブモジュール（3階層目の表示例）",
       "icon": "✅",
@@ -38,7 +38,7 @@
     },
     {
       "id": "token-issuer",
-      "type": "feature",
+      "type": "function",
       "name": "トークン発行",
       "description": "検証済みユーザーに対して JWT を発行するサブモジュール（3階層目の表示例）",
       "icon": "🎟️",
@@ -49,14 +49,14 @@
     },
     {
       "id": "user-service",
-      "type": "feature",
+      "type": "server",
       "name": "ユーザーサービス",
       "description": "ユーザー情報のCRUDを提供するマイクロサービス",
       "parentId": "backend"
     },
     {
       "id": "api-gateway",
-      "type": "feature",
+      "type": "server",
       "name": "APIゲートウェイ",
       "description": "外部からのリクエストを受け付け、内部サービスにルーティングする",
       "icon": "🌐",
@@ -67,7 +67,7 @@
     },
     {
       "id": "token-verifier",
-      "type": "feature",
+      "type": "function",
       "name": "トークン検証",
       "description": "受信リクエストに付与された認証トークンを検証する",
       "icon": "🔎",
@@ -75,14 +75,14 @@
     },
     {
       "id": "frontend",
-      "type": "feature",
+      "type": "client",
       "name": "フロントエンド",
       "description": "ブラウザ上で動作するユーザー向けアプリケーション",
       "icon": "💻"
     },
     {
       "id": "login-page",
-      "type": "feature",
+      "type": "client",
       "name": "ログインページ",
       "description": "ユーザーが資格情報を入力する画面",
       "icon": "🔑",
@@ -93,7 +93,7 @@
     },
     {
       "id": "dashboard",
-      "type": "feature",
+      "type": "client",
       "name": "ダッシュボード",
       "description": "ログイン後のトップ画面。各種APIを呼び出して情報を表示する",
       "icon": "📊",
@@ -101,7 +101,7 @@
     },
     {
       "id": "http-client",
-      "type": "feature",
+      "type": "class",
       "name": "HTTPクライアント",
       "description": "バックエンドへのリクエスト送受信を統括するSDK層",
       "icon": "📡",
@@ -109,14 +109,14 @@
     },
     {
       "id": "data-layer",
-      "type": "data",
-      "name": "データストア",
-      "description": "永続化されるデータの管理レイヤー",
+      "type": "db",
+      "name": "認証DB",
+      "description": "永続化される認証データの管理レイヤー",
       "icon": "💾"
     },
     {
       "id": "session",
-      "type": "data",
+      "type": "table",
       "name": "セッション",
       "description": "サーバーサイドで管理するユーザーセッション情報",
       "icon": "🗂️",
@@ -124,7 +124,7 @@
     },
     {
       "id": "jwt-token",
-      "type": "data",
+      "type": "term",
       "name": "JWTトークン",
       "description": "クライアントサイドで保持するJSONウェブトークン",
       "icon": "🎫",

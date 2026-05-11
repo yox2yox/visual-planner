@@ -1,0 +1,421 @@
+{
+  "title": "glossary.type のアーキテクチャ分類化",
+  "description": "曖昧な feature / data 分類をやめ、説明対象の変更に必要なレイヤーだけを選んで表現できるようにした変更の見取り図です。",
+  "metaphor": {
+    "title": "設計図の凡例を描き直す",
+    "description": "これまでは図面の部品をざっくり「機能」と呼んでいたが、今回から建物の入口、配管、部屋、設備台帳のように、設計図を読むために必要な種類へ凡例を分け直した。"
+  },
+  "takeaway": "viewer と生成スキルの両方が、feature ではなく説明に必要なアーキテクチャ層で glossary を読むようになった。",
+  "glossary": [
+    {
+      "id": "old-glossary-types",
+      "type": "term",
+      "name": "旧 glossary type",
+      "description": "term / feature / data の3分類。feature が広すぎて、クラス・関数・サーバー・クライアントなどの構造差を表しにくかった。",
+      "persona": "古い凡例",
+      "analogy": "すべてを大きな色鉛筆で塗る凡例",
+      "responsibility": "以前の plan JSON の分類を支えていた"
+    },
+    {
+      "id": "architecture-types",
+      "type": "term",
+      "name": "新 glossary type",
+      "description": "client / server / cloud-service / class / function / db / table と term。変更内容に必要なレイヤーだけを選べる分類。",
+      "persona": "新しい凡例",
+      "analogy": "入口・部屋・設備・台帳を分けて読める凡例",
+      "responsibility": "アーキテクチャ説明に必要な粒度を plan に持たせる"
+    },
+    {
+      "id": "viewer-type-model",
+      "type": "class",
+      "name": "GlossaryType 型定義",
+      "description": "viewer が受け入れる glossary type の union。feature / data を外し、新しい分類を型として固定した。",
+      "persona": "凡例の台帳係",
+      "analogy": "設計図に使ってよい記号一覧",
+      "responsibility": "UI とテストが同じ分類を使うための土台",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/types.ts",
+          "startLine": 1,
+          "endLine": 9,
+          "label": "GlossaryType union"
+        }
+      ]
+    },
+    {
+      "id": "glossary-panel-ui",
+      "type": "client",
+      "name": "GlossaryPanel UI",
+      "description": "新 type ごとのタブ、ラベル、色、デフォルトアイコンを表示するクライアント側コンポーネント。",
+      "persona": "凡例を見せる案内板",
+      "analogy": "設計図の右側にある色分け表",
+      "responsibility": "読者が glossary を分類で絞り込めるようにする",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/GlossaryPanel.svelte",
+          "startLine": 18,
+          "label": "tabs and type labels"
+        }
+      ]
+    },
+    {
+      "id": "interaction-flow-ui",
+      "type": "client",
+      "name": "InteractionFlow UI",
+      "description": "新 type ごとのノード色、枠線、グループ背景、アイコンを使って図の中の構成要素を描画する。",
+      "persona": "図面を描く製図係",
+      "analogy": "部品ごとに線と色を塗り分ける人",
+      "responsibility": "フロー図のノードをアーキテクチャ分類として読めるようにする",
+      "evidence": [
+        {
+          "path": "plan-viewer/src/components/InteractionFlow.svelte",
+          "startLine": 57,
+          "label": "node style maps"
+        }
+      ]
+    },
+    {
+      "id": "example-plan",
+      "type": "term",
+      "name": "example.json",
+      "description": "旧 feature / data のサンプルを、新しい server / client / class / function / db / table / term の例に置き換えた。",
+      "persona": "見本図",
+      "analogy": "新しい凡例で描き直したサンプル設計図",
+      "responsibility": "利用者が新しい type の使い分けを実例で見られるようにする",
+      "evidence": [
+        {
+          "path": "plan-viewer/example.json",
+          "label": "updated sample glossary types"
+        }
+      ]
+    },
+    {
+      "id": "skill-docs",
+      "type": "term",
+      "name": "visual-planner skill docs",
+      "description": "スキル利用時に、必要なレイヤーだけで説明することと新 type の使い分けを指示するドキュメント。",
+      "persona": "作図ルールの説明書",
+      "analogy": "設計図を書く前に読む凡例の手引き",
+      "responsibility": "今後 skill が生成する plan も新しい分類に揃える",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/SKILL.md",
+          "label": "authoring rule for architecture layers"
+        },
+        {
+          "path": ".agents/skills/visual-planner/reference/schema.md",
+          "label": "schema reference"
+        }
+      ]
+    },
+    {
+      "id": "make-plan-validator",
+      "type": "function",
+      "name": "make_plan validator",
+      "description": "plan JSON を HTML に埋め込む前に glossary type を検証する生成スクリプト側の関数群。",
+      "persona": "検札係",
+      "analogy": "設計図を印刷する前に凡例違反を止める係",
+      "responsibility": "古い feature / data を受け入れず、新 type だけを通す",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/scripts/make_plan.mjs",
+          "startLine": 18,
+          "endLine": 27,
+          "label": "VALID_TYPES"
+        }
+      ]
+    },
+    {
+      "id": "viewer-bundle",
+      "type": "client",
+      "name": "配布用 viewer HTML",
+      "description": "スキルが生成する自己完結 HTML のベース。viewer の変更を反映するため再ビルドした。",
+      "persona": "印刷済みの設計図台紙",
+      "analogy": "配布用に束ねられた図面テンプレート",
+      "responsibility": "スキル利用時に新 type 対応 UI を表示する",
+      "evidence": [
+        {
+          "path": ".agents/skills/visual-planner/viewer/index.html",
+          "label": "rebuilt single-file viewer"
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "type": "function",
+      "name": "検証テスト",
+      "description": "viewer の型チェック・ユニットテスト・ビルド、make_plan の validation テストで変更の一貫性を確認した。",
+      "persona": "点検係",
+      "analogy": "完成した図面を読み合わせるチェック担当",
+      "responsibility": "分類変更が viewer と generator の両方で壊れていないことを確認する"
+    }
+  ],
+  "pairs": [
+    {
+      "title": "viewer 側: 凡例を描き直す",
+      "description": "plan-viewer が受け取る type と、その type を画面でどう見せるかを更新した流れ。",
+      "comparison": [
+        {
+          "label": "分類の意味",
+          "current": "feature が多くの構成要素をまとめて受け持っていた",
+          "proposed": "client / server / class / function / db / table など、説明対象のレイヤーで分類する",
+          "note": "単なるラベル変更ではなく、設計説明に必要な粒度を選べるようにするため"
+        },
+        {
+          "label": "表示の責任",
+          "current": "feature / data / term の3色だけを表示する",
+          "proposed": "新 type ごとにタブ・バッジ・ノード色・アイコンを表示する",
+          "note": "viewer の型だけ変えると、UI が古い凡例のまま残ってしまう"
+        }
+      ],
+      "currentState": {
+        "description": "旧 viewer は feature / data / term を前提に、型・タブ・図の色分け・サンプルを組み立てていた。",
+        "storyTitle": "変更前: 大きな分類で塗り分ける",
+        "scenes": [
+          {
+            "title": "場面1: 旧凡例が viewer の型を決める",
+            "actor": "old-glossary-types",
+            "action": "古い凡例が feature / data / term の3分類を GlossaryType として渡す。",
+            "result": "UI はその3分類だけを表示すればよい前提になる。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: UI が3分類を描く",
+            "actor": "glossary-panel-ui",
+            "action": "GlossaryPanel と InteractionFlow が feature / data / term の色とラベルで表示する。",
+            "result": "クラスや関数の違いは glossary の名前や説明文に押し込まれる。",
+            "interactionFlows": [
+              2,
+              3
+            ]
+          }
+        ],
+        "takeaway": "変更前は、構造の違いよりも大きな feature 分類が先に見えていた。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "old-glossary-types",
+            "target": "viewer-type-model",
+            "label": "3分類を定義",
+            "data": "term / feature / data"
+          },
+          {
+            "flow": 2,
+            "source": "viewer-type-model",
+            "target": "glossary-panel-ui",
+            "label": "タブ表示",
+            "data": "3分類ラベル"
+          },
+          {
+            "flow": 3,
+            "source": "viewer-type-model",
+            "target": "interaction-flow-ui",
+            "label": "ノード描画",
+            "data": "3分類スタイル"
+          }
+        ]
+      },
+      "proposedState": {
+        "description": "新 viewer は、アーキテクチャ説明に必要な type を型定義から UI 表示まで一貫して扱う。",
+        "storyTitle": "変更後: 必要なレイヤーだけを凡例に出す",
+        "scenes": [
+          {
+            "title": "場面1: 新凡例が型定義を置き換える",
+            "actor": "architecture-types",
+            "action": "新しい凡例が client / server / class / function / db / table などを GlossaryType として渡す。",
+            "result": "viewer は feature ではなく構造の種類を受け取る。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: UI が新しい凡例を表示する",
+            "actor": "glossary-panel-ui",
+            "action": "GlossaryPanel が分類タブとバッジを新 type で表示し、InteractionFlow が図の色分けを合わせる。",
+            "result": "読者はノードがクライアントなのか関数なのかを先に読める。",
+            "interactionFlows": [
+              2,
+              3
+            ]
+          },
+          {
+            "title": "場面3: サンプル図も新凡例に合わせる",
+            "actor": "example-plan",
+            "action": "example.json の認証システム例を server / client / class / function / db / table / term で描き直す。",
+            "result": "今後の利用者が新 type の使い分けをサンプルから学べる。",
+            "interactionFlows": [
+              4
+            ]
+          }
+        ],
+        "takeaway": "viewer 側は、型・表示・サンプルが同じ新凡例を読むようになった。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "architecture-types",
+            "target": "viewer-type-model",
+            "label": "型を置換",
+            "data": "new GlossaryType union"
+          },
+          {
+            "flow": 2,
+            "source": "viewer-type-model",
+            "target": "glossary-panel-ui",
+            "label": "タブとバッジを更新",
+            "data": "type labels / colors / icons"
+          },
+          {
+            "flow": 3,
+            "source": "viewer-type-model",
+            "target": "interaction-flow-ui",
+            "label": "ノード表現を更新",
+            "data": "node styles"
+          },
+          {
+            "flow": 4,
+            "source": "architecture-types",
+            "target": "example-plan",
+            "label": "サンプルを更新",
+            "data": "architecture-layer examples"
+          }
+        ]
+      },
+      "safeguards": [
+        "term は残し、JWT など構造要素ではない概念を無理に class や db に押し込めないようにした",
+        "example.json も更新して、型だけ通るが使い方が分からない状態を避けた"
+      ],
+      "takeaway": "viewer は feature を読まなくなり、図面の凡例としてアーキテクチャ層を直接読む。"
+    },
+    {
+      "title": "skill 側: 生成ルールと検札係を揃える",
+      "description": "viewer が新 type を理解しても、スキルが古い JSON を生成・検証していたら入口でズレるため、生成ルールも更新した。",
+      "comparison": [
+        {
+          "label": "生成時の指示",
+          "current": "スキル文書は feature / data / term を使うよう案内していた",
+          "proposed": "必要なレイヤーだけで説明し、新しい architecture type を使うよう案内する",
+          "note": "今回の意図は viewer の見た目ではなく、説明の設計思想を変えることだから"
+        },
+        {
+          "label": "バリデーション",
+          "current": "make_plan validator が古い feature / data を正としていた",
+          "proposed": "validator が新 type だけを受け入れる",
+          "note": "生成時に古い分類を通してしまうと、配布 HTML とスキーマの約束が割れる"
+        }
+      ],
+      "currentState": {
+        "description": "旧 skill は plan を作るとき、feature / data / term を schema と validator の両方で正としていた。",
+        "storyTitle": "変更前: 古い凡例で印刷してしまう",
+        "scenes": [
+          {
+            "title": "場面1: 説明書が古い分類を案内する",
+            "actor": "skill-docs",
+            "action": "visual-planner の手順が feature / data / term を使うよう plan 作者に伝える。",
+            "result": "新しい viewer の意図と、生成される JSON の作法がズレる。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: 検札係も古い分類を通す",
+            "actor": "make-plan-validator",
+            "action": "make_plan validator が feature / data を valid type として受け入れる。",
+            "result": "古い凡例の plan が HTML に埋め込まれてしまう。",
+            "interactionFlows": [
+              2
+            ]
+          }
+        ],
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "old-glossary-types",
+            "target": "skill-docs",
+            "label": "古い作図ルールを案内",
+            "data": "feature / data guidance"
+          },
+          {
+            "flow": 2,
+            "source": "old-glossary-types",
+            "target": "make-plan-validator",
+            "label": "古い分類を許可",
+            "data": "VALID_TYPES"
+          }
+        ],
+        "takeaway": "入口が古いままだと、viewer の新しい凡例まで plan が届かない。"
+      },
+      "proposedState": {
+        "description": "新 skill は、必要なレイヤーだけで説明する方針を文書化し、validator も同じ type セットだけを通す。",
+        "storyTitle": "変更後: 説明書と検札係が同じ凡例を見る",
+        "scenes": [
+          {
+            "title": "場面1: 説明書がレイヤー選択を案内する",
+            "actor": "skill-docs",
+            "action": "クラス内変更なら関数同士、大きな変更なら client / server / cloud / DB まで、必要なレイヤーで説明すると明記する。",
+            "result": "plan 作者は feature という曖昧な箱に戻らずに済む。",
+            "interactionFlows": [
+              1
+            ]
+          },
+          {
+            "title": "場面2: 検札係が新 type だけを通す",
+            "actor": "make-plan-validator",
+            "action": "VALID_TYPES を新しい architecture type に更新し、生成前に確認する。",
+            "result": "スキルが出力する HTML も viewer の約束と一致する。",
+            "interactionFlows": [
+              2,
+              3
+            ]
+          },
+          {
+            "title": "場面3: 点検係が一貫性を確認する",
+            "actor": "tests",
+            "action": "viewer テスト、make_plan テスト、型チェック、ビルドで、入口から表示までの一貫性を確認する。",
+            "result": "型・生成器・配布 bundle の足並みが揃ったことが分かる。",
+            "interactionFlows": [
+              4
+            ]
+          }
+        ],
+        "takeaway": "skill 側は、作図ルールと validator が同じ新凡例を守るようになった。",
+        "interactions": [
+          {
+            "flow": 1,
+            "source": "architecture-types",
+            "target": "skill-docs",
+            "label": "作図ルールを更新",
+            "data": "layer-aware guidance"
+          },
+          {
+            "flow": 2,
+            "source": "architecture-types",
+            "target": "make-plan-validator",
+            "label": "許可 type を更新",
+            "data": "VALID_TYPES"
+          },
+          {
+            "flow": 3,
+            "source": "make-plan-validator",
+            "target": "viewer-bundle",
+            "label": "検証済み plan を埋め込み",
+            "data": "self-contained HTML"
+          },
+          {
+            "flow": 4,
+            "source": "tests",
+            "target": "viewer-bundle",
+            "label": "ビルド成果物を確認",
+            "data": "typecheck / tests / build"
+          }
+        ]
+      },
+      "safeguards": [
+        "validator を更新したため、古い feature / data を含む新規 plan は生成時に止まる",
+        "配布用 viewer を再ビルドしたため、スキルから生成される HTML も新 UI を含む"
+      ],
+      "takeaway": "生成の入口と表示の出口が、同じアーキテクチャ分類を共有するようになった。"
+    }
+  ]
+}

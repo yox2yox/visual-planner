@@ -5,8 +5,8 @@ function makePlan(overrides = {}) {
   return {
     title: 't',
     glossary: [
-      { id: 'a', type: 'feature', name: 'A' },
-      { id: 'b', type: 'feature', name: 'B' },
+      { id: 'a', type: 'client', name: 'A' },
+      { id: 'b', type: 'server', name: 'B' },
     ],
     ...overrides,
   }
@@ -112,14 +112,14 @@ describe('validate (make_plan.mjs)', () => {
       glossary: [
         {
           id: 'a',
-          type: 'feature',
+          type: 'client',
           name: 'A',
           persona: '受付係',
           analogy: '入口のカウンター',
           responsibility: '依頼を受け付ける',
           evidence: [{ path: 'src/a.ts', startLine: 1 }],
         },
-        { id: 'b', type: 'feature', name: 'B', persona: '案内係' },
+        { id: 'b', type: 'server', name: 'B', persona: '案内係' },
       ],
       pairs: [
         {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { normalizePlan } from '../normalize'
 import type { Plan } from '../../types'
 
-const baseGlossary = [{ id: 'a', type: 'feature' as const, name: 'A', description: '' }]
+const baseGlossary = [{ id: 'a', type: 'server' as const, name: 'A', description: '' }]
 
 function makeState(label = 'call') {
   return {

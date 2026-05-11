@@ -37,14 +37,17 @@ Defining `pairs` together with top-level `currentState`/`proposedState` is a val
 `glossary[]` defines the items needed to explain the numbered flows in `interactions`.
 Use only the granularity required by those flows: request/input origins, processors, data stores,
 external systems, and data concepts that appear as sources, targets, or payloads.
+Choose the layer required by the change being explained. A class-local change may only need
+`function` nodes; a cross-boundary architecture change may need `client`, `server`,
+`cloud-service`, `db`, and `table` nodes.
 
 ```jsonc
 {
   "id":          "string — unique within glossary[]; used by parentId and interactions",
-  "type":        "term" | "feature" | "data",
+  "type":        "term" | "client" | "server" | "cloud-service" | "class" | "function" | "db" | "table",
   "name":        "string — short label shown on the node",
   "description": "string — shown in the detail panel on click",
-  "icon":        "string — emoji or single glyph. Optional. Defaults by type: term=📖, feature=⚡, data=💾",
+  "icon":        "string — emoji or single glyph. Optional. Defaults by type",
   "parentId":    "string — id of another glossary item. Optional. Nests this node under the parent (max 3 levels — deeper is dropped)",
   "persona":     "string — optional role-name as a person, kaisetsu style",
   "analogy":     "string — optional metaphor-world equivalent",
@@ -55,9 +58,14 @@ external systems, and data concepts that appear as sources, targets, or payloads
 
 ### Types
 
-- `feature` — an application component / module / service
-- `data` — a data store, payload, or persistent artifact
-- `term` — a domain concept, standard, or external reference
+- `client` — a user-facing client such as a Web browser or mobile app
+- `server` — a server-side application, service, or process
+- `cloud-service` — managed cloud infrastructure such as S3, Lambda, queues, or hosted auth
+- `class` — an object-oriented class
+- `function` — a function or class method
+- `db` — a database
+- `table` — a database table
+- `term` — a domain concept, standard, payload concept, or external reference
 
 ### Nesting rules
 
@@ -220,8 +228,8 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
   "title": "Hello plan",
   "description": "Tiny example.",
   "glossary": [
-    { "id": "client", "type": "feature", "name": "Client" },
-    { "id": "server", "type": "feature", "name": "Server" }
+    { "id": "client", "type": "client", "name": "Client" },
+    { "id": "server", "type": "server", "name": "Server" }
   ],
   "proposedState": {
     "description": "Client calls server.",
@@ -239,9 +247,9 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
   "title": "Hello plan",
   "description": "Two independent flows.",
   "glossary": [
-    { "id": "client", "type": "feature", "name": "Client" },
-    { "id": "server", "type": "feature", "name": "Server" },
-    { "id": "db", "type": "data", "name": "DB" }
+    { "id": "client", "type": "client", "name": "Client" },
+    { "id": "server", "type": "server", "name": "Server" },
+    { "id": "db", "type": "db", "name": "DB" }
   ],
   "pairs": [
     {
