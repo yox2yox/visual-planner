@@ -4,7 +4,7 @@ import { render } from 'svelte/server'
 import InlineGlossaryText from '../../components/InlineGlossaryText.svelte'
 import { selectedGlossaryId } from '../../stores'
 import type { GlossaryItem } from '../../types'
-import { getGlossaryAncestorIds, parseGlossaryLinks } from '../glossaryLinks'
+import { getGlossaryAncestorIds, glossaryLinksToPlainText, parseGlossaryLinks } from '../glossaryLinks'
 
 const glossary: GlossaryItem[] = [
   { id: 'root', type: 'server', name: 'Root', description: '' },
@@ -58,6 +58,13 @@ describe('parseGlossaryLinks', () => {
     expect(parseGlossaryLinks('<a href="#glossary:child"><em>Child</em></a>', ids)).toEqual([
       { type: 'glossary-link', id: 'child', label: '<em>Child</em>' },
     ])
+  })
+})
+
+describe('glossaryLinksToPlainText', () => {
+  it('strips supported glossary anchors down to their labels', () => {
+    expect(glossaryLinksToPlainText('Ask <a href="#glossary:child">Child</a>.', ids)).toBe('Ask Child.')
+    expect(glossaryLinksToPlainText('<a href="#glossary:missing">Missing</a>', ids)).toBe('Missing')
   })
 })
 

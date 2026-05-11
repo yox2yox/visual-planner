@@ -4,6 +4,12 @@
   import type { GlossaryItem, GlossaryType } from '../types'
   import { buildTree, filterTree, flattenTree, type TreeNode } from '../utils/filter'
   import { getGlossaryAncestorIds } from '../utils/glossaryLinks'
+  import {
+    glossaryTypeBadgeColors,
+    glossaryTypeColors,
+    glossaryTypeIcons,
+    glossaryTypeLabels,
+  } from '../utils/glossaryDisplay'
   import { selectedGlossaryId } from '../stores'
 
   interface Props {
@@ -26,50 +32,6 @@
     { value: 'table', label: '▦ テーブル' },
   ]
 
-  const defaultIcons: Record<GlossaryType, string> = {
-    term: '📖',
-    client: '💻',
-    server: '🖥️',
-    'cloud-service': '☁️',
-    class: '📦',
-    function: 'ƒ',
-    db: '🗄️',
-    table: '▦',
-  }
-
-  const typeColors: Record<GlossaryType, string> = {
-    term: 'bg-purple-100 text-purple-800 border-purple-200',
-    client: 'bg-sky-100 text-sky-800 border-sky-200',
-    server: 'bg-blue-100 text-blue-800 border-blue-200',
-    'cloud-service': 'bg-cyan-100 text-cyan-800 border-cyan-200',
-    class: 'bg-amber-100 text-amber-800 border-amber-200',
-    function: 'bg-orange-100 text-orange-800 border-orange-200',
-    db: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    table: 'bg-teal-100 text-teal-800 border-teal-200',
-  }
-
-  const typeBadgeColors: Record<GlossaryType, string> = {
-    term: 'bg-purple-100 text-purple-700',
-    client: 'bg-sky-100 text-sky-700',
-    server: 'bg-blue-100 text-blue-700',
-    'cloud-service': 'bg-cyan-100 text-cyan-700',
-    class: 'bg-amber-100 text-amber-700',
-    function: 'bg-orange-100 text-orange-700',
-    db: 'bg-emerald-100 text-emerald-700',
-    table: 'bg-teal-100 text-teal-700',
-  }
-
-  const typeLabels: Record<GlossaryType, string> = {
-    term: '用語',
-    client: 'クライアント',
-    server: 'サーバー',
-    'cloud-service': 'クラウドサービス',
-    class: 'クラス',
-    function: '関数',
-    db: 'DB',
-    table: 'テーブル',
-  }
-
   let tree = $derived(buildTree(items))
   let filteredTree = $derived(filterTree(tree, activeTab))
   let flatNodes = $derived(flattenTree(filteredTree))
@@ -88,6 +50,7 @@
   $effect(() => {
     if (!selectedId || !itemMap.has(selectedId)) return
 
+    const idToScroll = selectedId
     const ancestorIds = getGlossaryAncestorIds(selectedId, items)
     const nextCollapsed = new Set(collapsed)
     let changed = false
@@ -98,7 +61,7 @@
     if (!flatNodes.some((node) => node.item.id === selectedId)) activeTab = 'all'
 
     tick().then(() => {
-      cardElements.get(selectedId)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      cardElements.get(idToScroll)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
   })
 
@@ -174,7 +137,7 @@
       {#if isVisible(node)}
         <div
           use:registerCard={node.item.id}
-          class="w-full text-left rounded-lg border transition-all cursor-pointer {typeColors[node.item.type]} {selectedId === node.item.id ? 'ring-2 ring-offset-1 ring-blue-400' : 'hover:shadow-md'}"
+          class="w-full text-left rounded-lg border transition-all cursor-pointer {glossaryTypeColors[node.item.type]} {selectedId === node.item.id ? 'ring-2 ring-offset-1 ring-blue-400' : 'hover:shadow-md'}"
           style="margin-left: {node.depth * 24}px; padding: {node.depth === 0 ? '12px 16px' : '8px 16px'};"
           role="button"
           tabindex="0"
@@ -192,9 +155,9 @@
             {:else}
               <span class="w-5 flex-shrink-0"></span>
             {/if}
-            <span class="text-lg">{node.item.icon ?? defaultIcons[node.item.type]}</span>
-            <span class="text-xs font-medium px-2 py-0.5 rounded {typeBadgeColors[node.item.type]}">
-              {typeLabels[node.item.type]}
+            <span class="text-lg">{node.item.icon ?? glossaryTypeIcons[node.item.type]}</span>
+            <span class="text-xs font-medium px-2 py-0.5 rounded {glossaryTypeBadgeColors[node.item.type]}">
+              {glossaryTypeLabels[node.item.type]}
             </span>
             <p class="font-bold text-gray-900 text-sm flex-1">{node.item.name}</p>
           </div>

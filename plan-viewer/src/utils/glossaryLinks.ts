@@ -49,6 +49,12 @@ export function parseGlossaryLinks(text: string, validIds: ReadonlySet<string>):
   return segments
 }
 
+export function glossaryLinksToPlainText(text: string, validIds: ReadonlySet<string>): string {
+  return parseGlossaryLinks(text, validIds)
+    .map((segment) => (segment.type === 'glossary-link' ? segment.label : segment.text))
+    .join('')
+}
+
 export function getGlossaryAncestorIds(id: string, items: GlossaryItem[]): string[] {
   const itemMap = new Map(items.map((item) => [item.id, item]))
   const ancestors: string[] = []
