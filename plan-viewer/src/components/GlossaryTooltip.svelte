@@ -2,6 +2,7 @@
   import type { GlossaryItem } from '../types'
   import { glossaryTypeBadgeColors, glossaryTypeColors, glossaryTypeIcons, glossaryTypeLabels } from '../utils/glossaryDisplay'
   import { glossaryLinksToPlainText } from '../utils/glossaryLinks'
+  import CodeAccordion from './CodeAccordion.svelte'
 
   interface Props {
     item: GlossaryItem
@@ -17,9 +18,9 @@
   }
 </script>
 
-<span
+<div
   role="tooltip"
-  class="pointer-events-auto absolute left-1/2 top-full z-30 mt-2 block w-80 max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal rounded-lg border p-3 text-left text-xs font-normal leading-5 shadow-xl {glossaryTypeColors[item.type]}"
+  class="pointer-events-auto absolute left-1/2 top-full z-30 mt-2 block w-96 max-w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal rounded-lg border p-3 text-left text-xs font-normal leading-5 shadow-xl {glossaryTypeColors[item.type]}"
 >
   <span class="flex items-start gap-2">
     <span class="flex min-w-0 flex-1 items-center gap-2">
@@ -53,4 +54,7 @@
       {/if}
     </span>
   {/if}
-</span>
+  {#if item.codeSnippets && item.codeSnippets.length > 0}
+    <CodeAccordion snippets={item.codeSnippets} compact />
+  {/if}
+</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import InlineGlossaryText from './InlineGlossaryText.svelte'
+  import CodeAccordion from './CodeAccordion.svelte'
   import type { GlossaryItem, GlossaryType } from '../types'
   import { buildTree, filterTree, flattenTree, type TreeNode } from '../utils/filter'
   import { getGlossaryAncestorIds } from '../utils/glossaryLinks'
@@ -189,6 +190,11 @@
               {#if formatEvidence(node.item)}
                 <p><span class="font-semibold">裏付け:</span> <span class="font-mono">{formatEvidence(node.item)}</span></p>
               {/if}
+            </div>
+          {/if}
+          {#if node.item.codeSnippets && node.item.codeSnippets.length > 0}
+            <div class="ml-7" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()} role="presentation">
+              <CodeAccordion snippets={node.item.codeSnippets} />
             </div>
           {/if}
         </div>

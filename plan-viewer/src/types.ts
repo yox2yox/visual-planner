@@ -19,6 +19,16 @@ export interface GlossaryItem {
   analogy?: string
   responsibility?: string
   evidence?: EvidenceRef[]
+  codeSnippets?: CodeSnippet[]
+}
+
+export interface CodeSnippet {
+  language?: string
+  code: string | string[]
+  label?: string
+  path?: string
+  startLine?: number
+  endLine?: number
 }
 
 export interface ArchitectureEdge {
