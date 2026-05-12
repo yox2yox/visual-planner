@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { render } from 'svelte/server'
+import GlossaryTooltip from '../../components/GlossaryTooltip.svelte'
 import InlineGlossaryText from '../../components/InlineGlossaryText.svelte'
 import type { GlossaryItem } from '../../types'
 import { getGlossaryAncestorIds, glossaryLinksToPlainText, parseGlossaryLinks } from '../glossaryLinks'
 
 const glossary: GlossaryItem[] = [
   { id: 'root', type: 'server', name: 'Root', description: '' },
-  { id: 'child', type: 'term', name: 'Child', description: 'Child glossary description', parentId: 'root' },
+  {
+    id: 'child',
+    type: 'term',
+    name: 'Child',
+    description: 'Child glossary description',
+    persona: 'Ask <a href="#glossary:root">Root</a> first',
+    responsibility: 'Own <a href="#glossary:missing">missing labels</a>',
+    parentId: 'root',
+  },
   { id: 'leaf', type: 'table', name: 'Leaf', description: '', parentId: 'child' },
 ]
 
@@ -94,6 +103,25 @@ describe('InlineGlossaryText', () => {
 
     expect(body).toContain('&lt;em>Child&lt;/em>')
     expect(body).not.toContain('<em>Child</em>')
+  })
+})
+
+describe('GlossaryTooltip', () => {
+  it('renders shared chip content with glossary links flattened to text', () => {
+    const { body } = render(GlossaryTooltip, {
+      props: {
+        item: glossary[1],
+        validIds: ids,
+        onclose: () => {},
+      },
+    })
+
+    expect(body).toContain('Child glossary description')
+    expect(body).toContain('Ask Root first')
+    expect(body).toContain('Own missing labels')
+    expect(body).not.toContain('href="#glossary:root"')
+    expect(body).not.toContain('href="#glossary:missing"')
+    expect(body).toContain('aria-label="Child のチップを閉じる"')
   })
 })
 

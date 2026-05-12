@@ -18,7 +18,9 @@
     flattenTree,
     type TreeNode,
   } from '../utils/filter'
+  import { findArchitectureTooltipItem } from '../utils/architectureTooltip'
   import { selectedGlossaryId } from '../stores'
+  import ArchitectureGlossaryNode from './ArchitectureGlossaryNode.svelte'
 
   const MAX_DEPTH = 3
 
@@ -108,8 +110,19 @@
     ].join(' ')
   }
 
-  function makeNodeLabel(item: GlossaryItem): string {
-    return `${item.icon ?? defaultIcons[item.type] ?? ''} ${item.name}`
+  function makeNodeData(item: GlossaryItem, isGroup = false) {
+    const tooltipItem = findArchitectureTooltipItem(item.id, diagramGlossary)
+
+    return {
+      item: tooltipItem
+        ? { ...tooltipItem, icon: tooltipItem.icon ?? defaultIcons[tooltipItem.type] ?? '' }
+        : undefined,
+      validIds: diagramValidIds,
+      isGroup,
+      tooltipVisible: activeTooltipId === item.id,
+      onOpen: openTooltip,
+      onClose: closeTooltip,
+    }
   }
 
   interface LayoutResult {
@@ -146,15 +159,19 @@
     item: GlossaryItem,
     position: { x: number; y: number },
     isSelected: boolean,
-    parentId?: string
+    parentId?: string,
+    isGroup = false
   ): Node {
     return {
       id: item.id,
       position,
-      data: { label: makeNodeLabel(item) },
+      type: 'architectureGlossary',
+      data: makeNodeData(item, isGroup),
       sourcePosition: nodeSourcePosition(item.id),
       targetPosition: nodeTargetPosition(item.id),
       style: makeNodeStyle(item, isSelected),
+      focusable: false,
+      zIndex: activeTooltipId === item.id ? 20 : undefined,
       ...(parentId ? { parentId } : {}),
     }
   }
@@ -223,11 +240,13 @@
       nodes.push({
         id: treeNode.item.id,
         position,
-        data: { label: makeNodeLabel(treeNode.item) },
+        type: 'architectureGlossary',
+        data: makeNodeData(treeNode.item, true),
         sourcePosition: nodeSourcePosition(treeNode.item.id),
         targetPosition: nodeTargetPosition(treeNode.item.id),
         style: '',
-        zIndex: -1,
+        focusable: false,
+        zIndex: activeTooltipId === treeNode.item.id ? 20 : -1,
         ...(parentId ? { parentId } : {}),
       })
 
@@ -394,6 +413,7 @@
   }
 
   let selectedId = $state<string | null>(null)
+  let activeTooltipId = $state<string | null>(null)
 
   $effect(() => {
     const unsubscribe = selectedGlossaryId.subscribe((v) => {
@@ -403,6 +423,9 @@
   })
 
   const diagramGlossary = $derived(filterGlossaryToArchitectureDiagram(glossary, architectureEdges))
+  const diagramValidIds = $derived(new Set(diagramGlossary.map((item) => item.id)))
+
+  const nodeTypes = { architectureGlossary: ArchitectureGlossaryNode }
 
   const diffEdges = $derived(
     isDiff ? computeDiffEdges(baseArchitectureEdges, architectureEdges) : null
@@ -416,6 +439,20 @@
   const validIds = $derived(
     new Set(flattenTree(layout.tree).map((n) => n.item.id))
   )
+
+  function openTooltip(id: string) {
+    activeTooltipId = diagramValidIds.has(id) ? id : null
+  }
+
+  function closeTooltip() {
+    activeTooltipId = null
+  }
+
+  $effect(() => {
+    if (activeTooltipId && !diagramValidIds.has(activeTooltipId)) {
+      activeTooltipId = null
+    }
+  })
 
   $effect(() => {
     nodes = layout.nodes
@@ -431,7 +468,7 @@
 </script>
 
 <div style="height: {diagramHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
-  <SvelteFlow bind:nodes bind:edges fitView elevateNodesOnSelect={false}>
+  <SvelteFlow bind:nodes bind:edges {nodeTypes} fitView elevateNodesOnSelect={false}>
     <Background />
   </SvelteFlow>
 </div>
