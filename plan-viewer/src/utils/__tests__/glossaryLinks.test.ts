@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { get } from 'svelte/store'
 import { render } from 'svelte/server'
 import InlineGlossaryText from '../../components/InlineGlossaryText.svelte'
-import { selectedGlossaryId } from '../../stores'
 import type { GlossaryItem } from '../../types'
 import { getGlossaryAncestorIds, glossaryLinksToPlainText, parseGlossaryLinks } from '../glossaryLinks'
 
@@ -69,7 +67,7 @@ describe('glossaryLinksToPlainText', () => {
 })
 
 describe('InlineGlossaryText', () => {
-  it('renders valid targets as controlled buttons and missing targets as plain text', () => {
+  it('renders valid targets as non-navigating buttons with chips hidden until interaction and missing targets as plain text', () => {
     const { body } = render(InlineGlossaryText, {
       props: {
         text: 'Open <a href="#glossary:child">child</a> and <a href="#glossary:missing">missing</a>.',
@@ -83,6 +81,7 @@ describe('InlineGlossaryText', () => {
     expect(body).not.toContain('href="#glossary:child"')
     expect(body).not.toContain('href="#glossary:missing"')
     expect(body).not.toContain('Child glossary description')
+    expect(body).not.toContain('aria-label="Child のチップを閉じる"')
   })
 
   it('escapes nested tags in labels instead of injecting HTML', () => {
@@ -98,13 +97,7 @@ describe('InlineGlossaryText', () => {
   })
 })
 
-describe('glossary link selection helpers', () => {
-  it('can update the selected glossary store for a clicked valid link', () => {
-    selectedGlossaryId.set(null)
-    selectedGlossaryId.set('child')
-    expect(get(selectedGlossaryId)).toBe('child')
-  })
-
+describe('glossary link helpers', () => {
   it('finds collapsed ancestors that must be expanded before scrolling', () => {
     expect(getGlossaryAncestorIds('leaf', glossary)).toEqual(['child', 'root'])
   })

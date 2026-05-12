@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
   import type { GlossaryItem } from '../types'
-  import { selectedGlossaryId } from '../stores'
   import { glossaryTypeBadgeColors, glossaryTypeColors, glossaryTypeIcons, glossaryTypeLabels } from '../utils/glossaryDisplay'
   import { glossaryLinksToPlainText, parseGlossaryLinks } from '../utils/glossaryLinks'
 
@@ -16,13 +14,29 @@
   const glossaryMap = $derived(new Map(glossary.map((item) => [item.id, item])))
   const segments = $derived(parseGlossaryLinks(text ?? '', validIds))
 
-  let activeTooltipKey = $state<string | null>(null)
-  let hoverTimer: ReturnType<typeof setTimeout> | null = null
-  const tooltipDelayMs = 500
+  let pinnedTooltipKeys = $state(new Set<string>())
+  let hoveredTooltipKey = $state<string | null>(null)
 
-  function selectGlossaryItem(event: MouseEvent, id: string) {
+  function pinTooltip(key: string) {
+    pinnedTooltipKeys = new Set([...pinnedTooltipKeys, key])
+  }
+
+  function showHoverTooltip(key: string) {
+    hoveredTooltipKey = key
+  }
+
+  function hideHoverTooltip(key: string) {
+    if (hoveredTooltipKey === key) hoveredTooltipKey = null
+  }
+
+  function handleLinkClick(event: MouseEvent, key: string) {
     event.stopPropagation()
-    selectedGlossaryId.set(id)
+    event.preventDefault()
+    pinTooltip(key)
+  }
+
+  function isTooltipVisible(key: string): boolean {
+    return pinnedTooltipKeys.has(key) || hoveredTooltipKey === key
   }
 
   function glossaryItem(id: string): GlossaryItem | undefined {
@@ -33,32 +47,12 @@
     return glossaryLinksToPlainText(value ?? '', validIds)
   }
 
-  function startTooltipTimer(key: string) {
-    clearTooltipTimer()
-    hoverTimer = setTimeout(() => {
-      activeTooltipKey = key
-      hoverTimer = null
-    }, tooltipDelayMs)
+  function closeTooltip(event: MouseEvent, key: string) {
+    event.stopPropagation()
+    event.preventDefault()
+    pinnedTooltipKeys = new Set([...pinnedTooltipKeys].filter((pinnedKey) => pinnedKey !== key))
+    hideHoverTooltip(key)
   }
-
-  function hideTooltip() {
-    clearTooltipTimer()
-    activeTooltipKey = null
-  }
-
-  function showTooltip(key: string) {
-    clearTooltipTimer()
-    activeTooltipKey = key
-  }
-
-  function clearTooltipTimer() {
-    if (hoverTimer) {
-      clearTimeout(hoverTimer)
-      hoverTimer = null
-    }
-  }
-
-  onDestroy(clearTooltipTimer)
 </script>
 
 {#each segments as segment, i}
@@ -69,25 +63,35 @@
       <button
         type="button"
         class="inline p-0 align-baseline font-medium text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 hover:decoration-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
-        onmouseenter={() => startTooltipTimer(tooltipKey)}
-        onmouseleave={hideTooltip}
-        onfocus={() => showTooltip(tooltipKey)}
-        onblur={hideTooltip}
-        onclick={(event) => selectGlossaryItem(event, segment.id)}
+        onmouseenter={() => showHoverTooltip(tooltipKey)}
+        onmouseleave={() => hideHoverTooltip(tooltipKey)}
+        onfocus={() => showHoverTooltip(tooltipKey)}
+        onblur={() => hideHoverTooltip(tooltipKey)}
+        onclick={(event) => handleLinkClick(event, tooltipKey)}
       >
         {segment.label}
       </button>
-      {#if item && activeTooltipKey === tooltipKey}
+      {#if item && isTooltipVisible(tooltipKey)}
         <span
           role="tooltip"
-          class="pointer-events-none absolute left-1/2 top-full z-30 mt-2 block w-80 max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal rounded-lg border p-3 text-left text-xs font-normal leading-5 shadow-xl {glossaryTypeColors[item.type]}"
+          class="pointer-events-auto absolute left-1/2 top-full z-30 mt-2 block w-80 max-w-[min(20rem,calc(100vw-2rem))] -translate-x-1/2 whitespace-normal rounded-lg border p-3 text-left text-xs font-normal leading-5 shadow-xl {glossaryTypeColors[item.type]}"
         >
-          <span class="flex items-center gap-2">
-            <span class="text-lg leading-none">{item.icon ?? glossaryTypeIcons[item.type]}</span>
-            <span class="rounded px-2 py-0.5 text-[11px] font-medium leading-4 {glossaryTypeBadgeColors[item.type]}">
-              {glossaryTypeLabels[item.type]}
+          <span class="flex items-start gap-2">
+            <span class="flex min-w-0 flex-1 items-center gap-2">
+              <span class="text-lg leading-none">{item.icon ?? glossaryTypeIcons[item.type]}</span>
+              <span class="rounded px-2 py-0.5 text-[11px] font-medium leading-4 {glossaryTypeBadgeColors[item.type]}">
+                {glossaryTypeLabels[item.type]}
+              </span>
+              <span class="min-w-0 flex-1 truncate text-sm font-bold text-gray-900">{item.name}</span>
             </span>
-            <span class="min-w-0 flex-1 truncate text-sm font-bold text-gray-900">{item.name}</span>
+            <button
+              type="button"
+              aria-label="{item.name} のチップを閉じる"
+              class="shrink-0 rounded px-1.5 py-0.5 text-sm leading-4 text-gray-500 hover:bg-white/70 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              onclick={(event) => closeTooltip(event, tooltipKey)}
+            >
+              ×
+            </button>
           </span>
           {#if item.description}
             <span class="mt-2 block text-gray-700">{tooltipText(item.description)}</span>
