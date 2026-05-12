@@ -33,7 +33,7 @@ const url = `http://localhost:4173/?plan=${encoded}`
 
 `example.json` は新形式 `pairs` を使って **「ログイン時の認証境界」** と **「認証済み API の責務境界」** の2ペアに分割した実例です。`user-auth` 配下の `auth-validator` / `token-issuer` で **最大 3 階層** の表示も確認できます。
 
-開発サーバーで確認する場合は `npm run dev` または `npm run preview` を起動し、上記のエンコード方法で `plan-viewer/example.json` を `?plan=` に渡してください。自己完結 HTML を作る場合は `.agents/skills/visual-planner/scripts/make_plan.mjs` を使います。
+開発サーバーで確認する場合は `npm run dev` または `npm run preview` を起動し、上記のエンコード方法で `plan-viewer/example.json` を `?plan=` に渡してください。自己完結 HTML を作る場合は `.apm/skills/sensei/scripts/make_plan.mjs` を使います。
 
 ## URL長制限の注意
 

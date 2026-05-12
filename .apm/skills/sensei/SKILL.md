@@ -1,9 +1,9 @@
 ---
-name: visual-planner
+name: sensei
 description: 実装計画、アーキテクチャ変更、前後比較、機能のデータフロー図を可視化したいときに使います。plan-viewer 用の JSON と、JSON をインライン化した自己完結 HTML を生成し、ユーザーが URL・サーバー・ネットワークなしで任意のブラウザから計画図を開けるようにします。
 ---
 
-# visual-planner
+# sensei
 
 機能案や移行計画を **2 つのファイル**に変換します。`plan.json` と、自己完結した `plan.html`（plan-viewer バンドルに JSON をインライン化したもの）です。ユーザーは HTML ファイルを任意のブラウザで開けます。サーバー、インストール、ネットワーク、長い URL は不要です。
 
