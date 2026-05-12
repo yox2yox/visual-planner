@@ -54,7 +54,7 @@
 
 <Handle type="target" position={targetPosition} />
 {#if item}
-  <span class="relative block">
+  <div class="relative block">
     <button
       type="button"
       class:group-trigger={data.isGroup}
@@ -69,15 +69,15 @@
       <span class="min-w-0 truncate">{item.name}</span>
     </button>
     {#if data.tooltipVisible}
-      <span id="architecture-tooltip-{id}">
+      <div id="architecture-tooltip-{id}">
         <GlossaryTooltip
           {item}
           {validIds}
           onclose={closeTooltip}
         />
-      </span>
+      </div>
     {/if}
-  </span>
+  </div>
 {/if}
 <Handle type="source" position={sourcePosition} />
 

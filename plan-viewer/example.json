@@ -45,7 +45,31 @@
       "parentId": "user-auth",
       "persona": "鍵を作る係",
       "analogy": "カードキー発行機",
-      "responsibility": "本人確認済みの利用者に、以後使う認証トークンを渡す"
+      "responsibility": "本人確認済みの利用者に、以後使う認証トークンを渡す",
+      "codeSnippets": [
+        {
+          "language": "ts",
+          "label": "JWT 発行のコア",
+          "path": "src/auth/tokenIssuer.ts",
+          "startLine": 12,
+          "endLine": 24,
+          "code": [
+            "export function issueToken(user: User): string {",
+            "  const payload = {",
+            "    sub: user.id,",
+            "    iat: Math.floor(Date.now() / 1000),",
+            "    exp: Math.floor(Date.now() / 1000) + 60 * 60,",
+            "  }",
+            "  return jwt.sign(payload, SECRET, { algorithm: 'HS256' })",
+            "}"
+          ]
+        },
+        {
+          "language": "ts",
+          "label": "呼び出し側",
+          "code": "const token = issueToken(verifiedUser)\nres.json({ token })"
+        }
+      ]
     },
     {
       "id": "user-service",
