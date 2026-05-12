@@ -1,0 +1,9 @@
+name: sensei
+version: 0.1.0
+description: 実装計画やアーキテクチャ図を自己完結 HTML として可視化するスキル
+author: yox2yox
+dependencies:
+  apm: []
+  mcp: []
+includes: auto
+scripts: {}
