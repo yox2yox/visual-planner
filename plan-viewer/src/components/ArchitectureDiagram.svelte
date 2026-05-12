@@ -468,7 +468,14 @@
 </script>
 
 <div style="height: {diagramHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
-  <SvelteFlow bind:nodes bind:edges {nodeTypes} fitView elevateNodesOnSelect={false}>
+  <SvelteFlow
+    bind:nodes
+    bind:edges
+    {nodeTypes}
+    fitView
+    elevateNodesOnSelect={false}
+    onnodeclick={({ node }) => openTooltip(node.id)}
+  >
     <Background />
   </SvelteFlow>
 </div>

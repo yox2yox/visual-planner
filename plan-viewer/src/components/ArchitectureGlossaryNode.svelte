@@ -24,12 +24,6 @@
   const item = $derived(data.item)
   const validIds = $derived(data.validIds ?? new Set<string>())
 
-  function openTooltip(event: Event) {
-    if (!item) return
-    event.stopPropagation()
-    data.onOpen?.(id)
-  }
-
   function closeTooltip(event?: MouseEvent) {
     event?.stopPropagation()
     event?.preventDefault()
@@ -61,8 +55,7 @@
       class:leaf-trigger={!data.isGroup}
       aria-describedby={data.tooltipVisible ? `architecture-tooltip-${id}` : undefined}
       aria-expanded={data.tooltipVisible}
-      class="nodrag nopan inline-flex min-w-0 items-center gap-1.5 rounded text-left font-semibold text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
-      onclick={openTooltip}
+      class="inline-flex min-w-0 items-center gap-1.5 rounded text-left font-semibold text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
       onkeydown={handleKeydown}
     >
       <span class="shrink-0">{item.icon}</span>
