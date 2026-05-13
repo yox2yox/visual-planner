@@ -4,6 +4,7 @@ import type { ArchitectureEdge, GlossaryItem } from '../types'
 import { composeGroupLabel, groupEdgesByPair, measureLabel } from './edgeLabels'
 import type { PositionedNode } from './edgeRouting'
 import { buildTree, type TreeNode } from './filter'
+import { DEFAULT_ZIGZAG_OPTIONS, applyZigzag, type ZigzagOptions } from './zigzagLayout'
 
 const elk = new ELK()
 
@@ -21,6 +22,11 @@ export interface ElkLayoutInput {
   groupHeader: number
   groupPaddingX: number
   groupPaddingY: number
+  /**
+   * Override the zigzag pass that staggers single-leaf columns vertically.
+   * Pass `null` to disable. Defaults to `DEFAULT_ZIGZAG_OPTIONS`.
+   */
+  zigzag?: ZigzagOptions | null
 }
 
 export interface ElkLayoutNode {
@@ -210,11 +216,22 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
     walk(root, undefined, 0, 0)
   }
 
+  // Stagger every other single-leaf column down so chains of leaves don't
+  // form a straight horizontal line; this stops smoothstep label chips from
+  // sitting directly on the edge stroke.
+  const zigzagged =
+    input.zigzag === null
+      ? { nodes, absolutePositions, totalHeight: laid.height ?? 0 }
+      : applyZigzag(
+          { nodes, absolutePositions, totalHeight: laid.height ?? 0 },
+          input.zigzag ?? DEFAULT_ZIGZAG_OPTIONS
+        )
+
   return {
-    nodes,
-    absolutePositions,
+    nodes: zigzagged.nodes,
+    absolutePositions: zigzagged.absolutePositions,
     tree,
     totalWidth: laid.width ?? 0,
-    totalHeight: laid.height ?? 0,
+    totalHeight: zigzagged.totalHeight,
   }
 }
