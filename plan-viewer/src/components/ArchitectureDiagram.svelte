@@ -1,24 +1,21 @@
 <script lang="ts">
-  import { SvelteFlow, Background, Position } from '@xyflow/svelte'
+  import { SvelteFlow, Background } from '@xyflow/svelte'
   import '@xyflow/svelte/dist/style.css'
   import type { Node, Edge } from '@xyflow/svelte'
   import type {
-    DiagramEdgeOptions,
     DiagramOptions,
     EdgeRenderStyle,
     GlossaryItem,
     ArchitectureEdge,
     DiffEdge,
-    NodePortPosition,
   } from '../types'
   import { computeDiffEdges } from '../utils/diff'
   import {
-    buildTree,
     filterGlossaryToArchitectureDiagram,
-    flattenTree,
-    type TreeNode,
   } from '../utils/filter'
   import { findArchitectureTooltipItem } from '../utils/architectureTooltip'
+  import { computeElkLayout, type ElkLayoutNode } from '../utils/elkLayout'
+  import { routeEdges, toRoutedInput, type PositionedNode } from '../utils/edgeRouting'
   import { selectedGlossaryId } from '../stores'
   import ArchitectureGlossaryNode from './ArchitectureGlossaryNode.svelte'
 
@@ -32,29 +29,21 @@
     baseArchitectureEdges?: ArchitectureEdge[]
   }
 
+  // Note: `diagram.nodePositions` and `diagram.edges.*Position` are no longer
+  // honoured — ELK owns layout and `edgeRouting` picks handles from geometry.
+  // The prop is still accepted for backward compatibility but ignored.
   const {
     glossary,
     architectureEdges,
-    diagram,
     isDiff = false,
     baseArchitectureEdges = [],
   }: Props = $props()
 
-  const NODE_W = 180
+  const NODE_W = 200
   const NODE_H = 60
-  const GAP_X = 40
-  const GAP_Y = 40
   const GROUP_PAD_X = 20
-  const GROUP_PAD_Y = 40
-  const GROUP_GAP = 60
-  const GROUP_HEADER = 30
-  const COLS_IN_GROUP = 3
-  const POSITION_MAP: Record<NodePortPosition, Position> = {
-    top: Position.Top,
-    right: Position.Right,
-    bottom: Position.Bottom,
-    left: Position.Left,
-  }
+  const GROUP_PAD_Y = 16
+  const GROUP_HEADER = 28
 
   const typeColors: Record<string, string> = {
     term: '#ede9fe',
@@ -97,7 +86,7 @@
     table: '▦',
   }
 
-  function makeNodeStyle(item: GlossaryItem, isSelected: boolean): string {
+  function makeLeafStyle(item: GlossaryItem, isSelected: boolean): string {
     return [
       `background: ${typeColors[item.type] ?? '#f3f4f6'};`,
       `border: 2px solid ${typeBorderColors[item.type] ?? '#6b7280'};`,
@@ -110,94 +99,12 @@
     ].join(' ')
   }
 
-  function makeNodeData(item: GlossaryItem, isGroup = false) {
-    const tooltipItem = findArchitectureTooltipItem(item.id, diagramGlossary)
-
-    return {
-      item: tooltipItem
-        ? { ...tooltipItem, icon: tooltipItem.icon ?? defaultIcons[tooltipItem.type] ?? '' }
-        : undefined,
-      validIds: diagramValidIds,
-      isGroup,
-      tooltipVisible: activeTooltipId === item.id,
-      onOpen: openTooltip,
-      onClose: closeTooltip,
-    }
-  }
-
-  interface LayoutResult {
-    nodes: Node[]
-    totalHeight: number
-    tree: TreeNode[]
-  }
-
-  function edgeKey(edge: Pick<ArchitectureEdge, 'order' | 'source' | 'target'>): string {
-    return `${edge.source}->${edge.target}`
-  }
-
-  function getDiagramEdgeOptions(edge: Pick<ArchitectureEdge, 'order' | 'source' | 'target'>): DiagramEdgeOptions {
-    return diagram?.edges?.[String(edge.order)] ?? diagram?.edges?.[edgeKey(edge)] ?? {}
-  }
-
-  function nodeSourcePosition(id: string): Position {
-    const edge = architectureEdges.find((edge) => edge.source === id)
-    const configured = edge
-      ? edge.sourcePosition ?? getDiagramEdgeOptions(edge).sourcePosition
-      : undefined
-    return configured ? POSITION_MAP[configured] : Position.Right
-  }
-
-  function nodeTargetPosition(id: string): Position {
-    const edge = architectureEdges.find((edge) => edge.target === id)
-    const configured = edge
-      ? edge.targetPosition ?? getDiagramEdgeOptions(edge).targetPosition
-      : undefined
-    return configured ? POSITION_MAP[configured] : Position.Left
-  }
-
-  function makeArchitectureNode(
+  function makeGroupStyle(
     item: GlossaryItem,
-    position: { x: number; y: number },
-    isSelected: boolean,
-    parentId?: string,
-    isGroup = false
-  ): Node {
-    return {
-      id: item.id,
-      position,
-      type: 'architectureGlossary',
-      data: makeNodeData(item, isGroup),
-      sourcePosition: nodeSourcePosition(item.id),
-      targetPosition: nodeTargetPosition(item.id),
-      style: makeNodeStyle(item, isSelected),
-      focusable: false,
-      zIndex: activeTooltipId === item.id ? 20 : undefined,
-      ...(parentId ? { parentId } : {}),
-    }
-  }
-
-  function buildManualLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
-    const nodes: Node[] = []
-    const tree = buildTree(items, MAX_DEPTH)
-    let maxY = 0
-
-    items.forEach((item, i) => {
-      const configured = diagram?.nodePositions?.[item.id]
-      const col = i % COLS_IN_GROUP
-      const row = Math.floor(i / COLS_IN_GROUP)
-      const position = configured ?? {
-        x: col * (NODE_W + GAP_X),
-        y: row * (NODE_H + GAP_Y),
-      }
-
-      maxY = Math.max(maxY, position.y + NODE_H)
-      nodes.push(makeArchitectureNode(item, position, selectedId === item.id))
-    })
-
-    return { nodes, totalHeight: maxY, tree }
-  }
-
-  function groupNodeStyle(item: GlossaryItem, width: number, height: number, isSelected: boolean): string {
+    width: number,
+    height: number,
+    isSelected: boolean
+  ): string {
     return [
       `background: ${groupBgColors[item.type] ?? '#f9fafb'};`,
       `border: 2px dashed ${typeBorderColors[item.type] ?? '#9ca3af'};`,
@@ -211,130 +118,35 @@
     ].join(' ')
   }
 
-  function buildHierarchicalLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
-    const tree = buildTree(items, MAX_DEPTH)
-    const nodes: Node[] = []
-
-    // Lay out a subtree rooted at `treeNode`. Returns the outer box size.
-    // The parent node is pushed with its own position (relative to its parent, or
-    // absolute for roots); children are pushed AFTER the parent with positions
-    // relative to `treeNode` itself so Svelte Flow's parentId system computes
-    // their absolute positions correctly.
-    function layoutSubtree(treeNode: TreeNode, position: { x: number; y: number }, parentId?: string): { width: number; height: number } {
-      const children = treeNode.children
-      const isLeaf = children.length === 0
-      const isSelected = selectedId === treeNode.item.id
-
-      if (isLeaf) {
-        nodes.push(makeArchitectureNode(treeNode.item, position, isSelected, parentId))
-        return { width: NODE_W, height: NODE_H }
-      }
-
-      // Push parent first so it appears before its children in the nodes array
-      // (required by Svelte Flow). Style/size is finalized after children are laid out.
-      // zIndex: -1 keeps the solid-background group behind the edge layer so that
-      // edges crossing the group rectangle stay visible. Combined with
-      // elevateNodesOnSelect={false} on <SvelteFlow>, the group stays below edges
-      // even when selected or dragged.
-      const groupNodeIndex = nodes.length
-      nodes.push({
-        id: treeNode.item.id,
-        position,
-        type: 'architectureGlossary',
-        data: makeNodeData(treeNode.item, true),
-        sourcePosition: nodeSourcePosition(treeNode.item.id),
-        targetPosition: nodeTargetPosition(treeNode.item.id),
-        style: '',
-        focusable: false,
-        zIndex: activeTooltipId === treeNode.item.id ? 20 : -1,
-        ...(parentId ? { parentId } : {}),
-      })
-
-      const leafChildren = children.filter((c) => c.children.length === 0)
-      const groupChildren = children.filter((c) => c.children.length > 0)
-
-      let innerY = GROUP_HEADER + GROUP_PAD_Y
-
-      // Leaf children: laid out in a grid, positions relative to this group
-      for (let i = 0; i < leafChildren.length; i++) {
-        const col = i % COLS_IN_GROUP
-        const row = Math.floor(i / COLS_IN_GROUP)
-        layoutSubtree(
-          leafChildren[i],
-          {
-            x: GROUP_PAD_X + col * (NODE_W + GAP_X),
-            y: innerY + row * (NODE_H + GAP_Y),
-          },
-          treeNode.item.id
-        )
-      }
-
-      const leafCols = Math.min(leafChildren.length, COLS_IN_GROUP)
-      const leafRows = Math.ceil(leafChildren.length / COLS_IN_GROUP)
-      const leafBlockHeight = leafRows > 0 ? leafRows * (NODE_H + GAP_Y) : 0
-      let subGroupY = innerY + leafBlockHeight
-
-      // Sub-groups: stacked vertically below leaves, positions relative to this group
-      let maxSubGroupWidth = 0
-      for (const subGroup of groupChildren) {
-        const sub = layoutSubtree(
-          subGroup,
-          { x: GROUP_PAD_X, y: subGroupY },
-          treeNode.item.id
-        )
-        subGroupY += sub.height + GAP_Y
-        maxSubGroupWidth = Math.max(maxSubGroupWidth, sub.width)
-      }
-
-      const contentWidth = Math.max(
-        leafCols * (NODE_W + GAP_X) - GAP_X,
-        maxSubGroupWidth,
-        NODE_W
-      )
-      const groupWidth = contentWidth + GROUP_PAD_X * 2
-      const groupHeight = subGroupY + GROUP_PAD_Y
-
-      nodes[groupNodeIndex] = {
-        ...nodes[groupNodeIndex],
-        style: groupNodeStyle(treeNode.item, groupWidth, groupHeight, isSelected),
-      }
-
-      return { width: groupWidth, height: groupHeight }
+  function makeNodeData(item: GlossaryItem, isGroup: boolean) {
+    const tooltipItem = findArchitectureTooltipItem(item.id, diagramGlossary)
+    return {
+      item: tooltipItem
+        ? { ...tooltipItem, icon: tooltipItem.icon ?? defaultIcons[tooltipItem.type] ?? '' }
+        : undefined,
+      validIds: diagramValidIds,
+      isGroup,
+      tooltipVisible: activeTooltipId === item.id,
+      onOpen: openTooltip,
+      onClose: closeTooltip,
     }
-
-    const rootLeaves = tree.filter((n) => n.children.length === 0)
-    const rootGroups = tree.filter((n) => n.children.length > 0)
-
-    let yOffset = 0
-
-    // Root groups — absolute coordinates, stacked vertically
-    for (const group of rootGroups) {
-      const result = layoutSubtree(group, { x: 0, y: yOffset })
-      yOffset += result.height + GROUP_GAP
-    }
-
-    // Root leaves — absolute coordinates, grid below groups
-    for (let i = 0; i < rootLeaves.length; i++) {
-      const col = i % COLS_IN_GROUP
-      const row = Math.floor(i / COLS_IN_GROUP)
-      layoutSubtree(rootLeaves[i], {
-        x: col * (NODE_W + GAP_X),
-        y: yOffset + row * (NODE_H + GAP_Y),
-      })
-    }
-    if (rootLeaves.length > 0) {
-      const leafRows = Math.ceil(rootLeaves.length / COLS_IN_GROUP)
-      yOffset += leafRows * (NODE_H + GAP_Y)
-    }
-
-    return { nodes, totalHeight: yOffset, tree }
   }
 
-  function buildLayout(items: GlossaryItem[], selectedId: string | null): LayoutResult {
-    if (diagram?.nodePositions && Object.keys(diagram.nodePositions).length > 0) {
-      return buildManualLayout(items, selectedId)
+  function toSvelteFlowNode(layoutNode: ElkLayoutNode, selectedId: string | null): Node {
+    const isSelected = selectedId === layoutNode.item.id
+    return {
+      id: layoutNode.id,
+      position: layoutNode.position,
+      type: 'architectureGlossary',
+      data: makeNodeData(layoutNode.item, layoutNode.isGroup),
+      style: layoutNode.isGroup
+        ? makeGroupStyle(layoutNode.item, layoutNode.width, layoutNode.height, isSelected)
+        : makeLeafStyle(layoutNode.item, isSelected),
+      focusable: false,
+      // Groups sit behind edges; leaves in front. See :global rule below.
+      zIndex: activeTooltipId === layoutNode.id ? 20 : layoutNode.isGroup ? -1 : undefined,
+      ...(layoutNode.parentId ? { parentId: layoutNode.parentId } : {}),
     }
-    return buildHierarchicalLayout(items, selectedId)
   }
 
   function edgeStyle(status: DiffEdge['status']): string {
@@ -363,55 +175,6 @@
     }
   }
 
-  function buildEdges(
-    validIds: Set<string>,
-    rawArchitectureEdges: ArchitectureEdge[],
-    diffEdges: DiffEdge[] | null
-  ): Edge[] {
-    const ids = validIds
-
-    if (diffEdges) {
-      return diffEdges
-        .filter((e) => {
-          const valid = ids.has(e.source) && ids.has(e.target)
-          if (!valid)
-            console.warn(`Skipping architecture edge: unknown glossary id (${e.source} -> ${e.target})`)
-          return valid
-        })
-        .map((e) => {
-          const raw = rawArchitectureEdges.find((edge) => edge.order === e.order)
-          const options = getDiagramEdgeOptions(e)
-          return {
-          id: `${e.order}-${e.source}-${e.target}-${e.status}`,
-          source: e.source,
-          target: e.target,
-          label: `${e.order}. ${e.label} / ${e.data}`,
-          animated: raw?.animated ?? options.animated ?? e.status === 'added',
-          type: raw?.edgeType ?? options.type,
-          style: `${edgeStyle(e.status)} ${renderStyle(raw?.edgeStyle ?? options.style)}`,
-        }})
-    }
-
-    return rawArchitectureEdges
-      .filter((edge) => {
-        const valid = ids.has(edge.source) && ids.has(edge.target)
-        if (!valid)
-          console.warn(
-            `Skipping architecture edge: unknown glossary id (${edge.source} -> ${edge.target})`
-          )
-        return valid
-      })
-      .map((edge) => ({
-        id: `${edge.order}-${edge.source}-${edge.target}`,
-        source: edge.source,
-        target: edge.target,
-        label: `${edge.order}. ${edge.label} / ${edge.data}`,
-        animated: edge.animated ?? getDiagramEdgeOptions(edge).animated,
-        type: edge.edgeType ?? getDiagramEdgeOptions(edge).type,
-        style: renderStyle(edge.edgeStyle ?? getDiagramEdgeOptions(edge).style),
-      }))
-  }
-
   let selectedId = $state<string | null>(null)
   let activeTooltipId = $state<string | null>(null)
 
@@ -433,12 +196,9 @@
 
   let nodes = $state.raw<Node[]>([])
   let edges = $state.raw<Edge[]>([])
-
-  let layout = $derived(buildLayout(diagramGlossary, selectedId))
-
-  const validIds = $derived(
-    new Set(flattenTree(layout.tree).map((n) => n.item.id))
-  )
+  let layoutNodes = $state.raw<ElkLayoutNode[]>([])
+  let absolutePositions = $state.raw<Map<string, PositionedNode>>(new Map())
+  let diagramHeight = $state(400)
 
   function openTooltip(id: string) {
     activeTooltipId = diagramValidIds.has(id) ? id : null
@@ -454,17 +214,89 @@
     }
   })
 
+  // Re-run ELK whenever the inputs change. The async result is committed back
+  // to the reactive node/edge stores. A token guards against stale awaits when
+  // the inputs change rapidly.
+  let layoutToken = 0
   $effect(() => {
-    nodes = layout.nodes
+    const items = diagramGlossary
+    const rawEdges = architectureEdges
+    const token = ++layoutToken
+    let cancelled = false
+
+    computeElkLayout({
+      glossary: items,
+      edges: rawEdges,
+      maxDepth: MAX_DEPTH,
+      leafWidth: NODE_W,
+      leafHeight: NODE_H,
+      groupHeader: GROUP_HEADER,
+      groupPaddingX: GROUP_PAD_X,
+      groupPaddingY: GROUP_PAD_Y,
+    })
+      .then((result) => {
+        if (cancelled || token !== layoutToken) return
+        layoutNodes = result.nodes
+        absolutePositions = result.absolutePositions
+        diagramHeight = Math.max(result.totalHeight + 80, 300)
+      })
+      .catch((err) => {
+        console.error('ELK layout failed:', err)
+      })
+
+    return () => {
+      cancelled = true
+    }
   })
 
+  // Map ELK nodes → Svelte Flow nodes when either layout or selection changes.
   $effect(() => {
-    edges = buildEdges(validIds, architectureEdges, diffEdges)
+    nodes = layoutNodes.map((ln) => toSvelteFlowNode(ln, selectedId))
   })
 
-  const diagramHeight = $derived(
-    Math.max(layout.totalHeight + 100, 300)
-  )
+  // Compose routed edges from architecture/diff inputs + positions.
+  $effect(() => {
+    if (absolutePositions.size === 0) {
+      edges = []
+      return
+    }
+
+    const inputs = diffEdges
+      ? diffEdges.map((e) => {
+          const raw = architectureEdges.find((edge) => edge.order === e.order)
+          const composedStyle = `${edgeStyle(e.status)} ${renderStyle(raw?.edgeStyle)}`.trim()
+          return toRoutedInput(e, composedStyle, {
+            animated: raw?.animated ?? e.status === 'added',
+            type: raw?.edgeType,
+          })
+        })
+      : architectureEdges.map((e) =>
+          toRoutedInput(e, renderStyle(e.edgeStyle), {
+            animated: e.animated,
+            type: e.edgeType,
+          })
+        )
+
+    const routed = routeEdges(absolutePositions, inputs)
+    edges = routed.map((r) => ({
+      id: r.id,
+      source: r.source,
+      target: r.target,
+      sourceHandle: r.sourceHandle,
+      targetHandle: r.targetHandle,
+      label: r.label,
+      animated: r.animated,
+      type: r.type ?? 'smoothstep',
+      style: r.style,
+      markerEnd: r.markerEnd,
+      markerStart: r.markerStart,
+      // Multi-line labels are produced for merged edges; keep them readable.
+      labelStyle: r.merged ? 'white-space: pre; font-size: 11px;' : 'font-size: 11px;',
+      labelBgPadding: [6, 4],
+      labelBgBorderRadius: 4,
+      labelBgStyle: 'fill: white; fill-opacity: 0.9;',
+    }))
+  })
 </script>
 
 <div style="height: {diagramHeight}px;" class="w-full border border-gray-200 rounded-lg overflow-hidden">
