@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CodeSnippet } from '../types'
   import { normalizeCode } from '../utils/normalizeCode'
+  import { highlight } from '../utils/highlight'
 
   interface Props {
     snippets: CodeSnippet[]
@@ -47,9 +48,11 @@
           {/if}
         </button>
         {#if open}
+          {@const normalized = normalizeCode(snippet.code)}
+          {@const hl = highlight(normalized, snippet.language)}
           <pre
-            class="snippet-pre overflow-x-auto whitespace-pre rounded-b border-t border-gray-100 bg-gray-50 px-3 py-2 font-mono text-gray-800 {compact ? 'text-[11px] max-h-64 overflow-y-auto leading-relaxed' : 'text-xs leading-relaxed'}"
-          ><code>{normalizeCode(snippet.code)}</code></pre>
+            class="snippet-pre overflow-x-auto whitespace-pre rounded-b border-t border-gray-100 bg-gray-50 px-3 py-2 font-mono text-gray-800 {compact ? 'text-[11px] max-h-64 overflow-y-auto leading-relaxed' : 'text-xs leading-relaxed'} {hl.language ? `language-${hl.language}` : ''}"
+          ><code class={hl.language ? `language-${hl.language}` : ''}>{@html hl.html}</code></pre>
         {/if}
       </div>
     {/each}
@@ -60,5 +63,23 @@
   .snippet-pre {
     tab-size: 2;
     -moz-tab-size: 2;
+  }
+  /* Neutralize Prism's default pre styling — we manage bg/padding/text-size via Tailwind */
+  .snippet-pre[class*='language-'],
+  .snippet-pre code[class*='language-'] {
+    background: transparent;
+    color: inherit;
+    text-shadow: none;
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    hyphens: none;
   }
 </style>
