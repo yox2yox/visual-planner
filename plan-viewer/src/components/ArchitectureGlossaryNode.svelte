@@ -17,8 +17,6 @@
   let {
     id,
     data = {},
-    targetPosition = Position.Top,
-    sourcePosition = Position.Bottom,
   }: NodeProps & { data: ArchitectureNodeData } = $props()
 
   const item = $derived(data.item)
@@ -44,9 +42,23 @@
       data.onOpen?.(id)
     }
   }
+
+  // Every node exposes 4 sides × 2 kinds = 8 handles. The actual handle used
+  // for any given edge is decided in `edgeRouting.ts` from the relative
+  // position of the two nodes, so we just need to make all of them available.
+  // Handle ids must match `handleId(side, kind)` in `edgeRouting.ts`.
+  const sides = [
+    { side: 'top', position: Position.Top },
+    { side: 'right', position: Position.Right },
+    { side: 'bottom', position: Position.Bottom },
+    { side: 'left', position: Position.Left },
+  ] as const
 </script>
 
-<Handle type="target" position={targetPosition} />
+{#each sides as { side, position } (side)}
+  <Handle id={`${side}-t`} type="target" {position} class="handle-dot" />
+  <Handle id={`${side}-s`} type="source" {position} class="handle-dot" />
+{/each}
 {#if item}
   <div class="relative block">
     <button
@@ -72,7 +84,6 @@
     {/if}
   </div>
 {/if}
-<Handle type="source" position={sourcePosition} />
 
 <style>
   .leaf-trigger {
@@ -81,5 +92,16 @@
 
   .group-trigger {
     max-width: 100%;
+  }
+
+  /* Render the 8 handles as a single tiny dot at each side so they don't
+     visually clutter the node. Svelte Flow positions source/target handles at
+     the same coordinate by default, which is fine for routing — we just hide
+     the duplicate. */
+  :global(.svelte-flow__handle.handle-dot) {
+    width: 6px;
+    height: 6px;
+    background: #94a3b8;
+    border: 1px solid #fff;
   }
 </style>
