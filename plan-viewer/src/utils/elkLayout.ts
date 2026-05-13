@@ -1,6 +1,7 @@
 import ELK from 'elkjs/lib/elk.bundled.js'
-import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk-api'
+import type { ElkExtendedEdge, ElkLabel, ElkNode } from 'elkjs/lib/elk-api'
 import type { ArchitectureEdge, GlossaryItem } from '../types'
+import { composeGroupLabel, groupEdgesByPair, measureLabel } from './edgeLabels'
 import type { PositionedNode } from './edgeRouting'
 import { buildTree, type TreeNode } from './filter'
 
@@ -8,7 +9,12 @@ const elk = new ELK()
 
 export interface ElkLayoutInput {
   glossary: GlossaryItem[]
-  edges: Pick<ArchitectureEdge, 'source' | 'target'>[]
+  /**
+   * Architecture edges as they appear on the plan. ELK is given one edge per
+   * unordered pair (matching how the renderer merges them) with the merged
+   * label attached so layered layout can reserve room between layers.
+   */
+  edges: Pick<ArchitectureEdge, 'order' | 'source' | 'target' | 'label' | 'data'>[]
   maxDepth: number
   leafWidth: number
   leafHeight: number
@@ -81,10 +87,14 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
         'elk.padding': `[top=${padTop},left=${padX},bottom=${padBottom},right=${padX}]`,
         // Generous spacing inside groups too — labels on merged edges can be
         // multi-line so they need horizontal room.
-        'elk.layered.spacing.nodeNodeBetweenLayers': '140',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '160',
         'elk.spacing.nodeNode': '70',
-        'elk.spacing.edgeNode': '40',
+        'elk.spacing.edgeNode': '50',
         'elk.spacing.edgeEdge': '25',
+        // Match the root graph: keep description text off edge lines.
+        'elk.edgeLabels.inline': 'false',
+        'elk.layered.edgeLabels.sideSelection': 'SMART_DOWN',
+        'elk.spacing.edgeLabel': '14',
       },
     }
     elkNodeById.set(node.item.id, elkNode)
@@ -96,15 +106,31 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
   // Edges are declared at the top level. With INCLUDE_CHILDREN the layered
   // algorithm reasons across the hierarchy and routes them to minimise
   // crossings.
+  //
+  // We pre-merge edges by unordered pair the same way the renderer does, so
+  // ELK sees the actual labels that will be drawn and can reserve room
+  // between layers for them. Each ELK edge carries its measured label as an
+  // ElkLabel — combined with `edgeLabels.inline: false` below, layered layout
+  // pushes labels off the edge line into the gap between layers.
   const validIds = new Set(elkNodeById.keys())
-  const elkEdges: ElkExtendedEdge[] = []
-  input.edges.forEach((edge, i) => {
-    if (!validIds.has(edge.source) || !validIds.has(edge.target)) return
-    elkEdges.push({
+  const reachable = input.edges.filter(
+    (edge) => validIds.has(edge.source) && validIds.has(edge.target)
+  )
+  const groups = groupEdgesByPair(reachable)
+  const elkEdges: ElkExtendedEdge[] = groups.map((group, i) => {
+    const text = composeGroupLabel(group)
+    const size = measureLabel(text)
+    const label: ElkLabel = {
+      text,
+      width: size.width,
+      height: size.height,
+    }
+    return {
       id: `e${i}`,
-      sources: [edge.source],
-      targets: [edge.target],
-    })
+      sources: [group.primary.source],
+      targets: [group.primary.target],
+      labels: [label],
+    }
   })
 
   const graph: ElkNode = {
@@ -113,20 +139,25 @@ export async function computeElkLayout(input: ElkLayoutInput): Promise<ElkLayout
       'elk.algorithm': 'layered',
       'elk.direction': 'RIGHT',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-      // Horizontal gap between layers — needs room for the (possibly
-      // multi-line, merged) edge labels that sit between columns.
+      // Horizontal gap between layers — labels live between layers, so we
+      // want generous baseline room here on top of label-driven spacing.
       'elk.layered.spacing.nodeNodeBetweenLayers': '220',
       // Vertical gap between nodes in the same layer.
       'elk.spacing.nodeNode': '90',
       // Keep edges away from neighbour nodes and from each other so parallel
       // edges between the same two layers don't pile up.
-      'elk.spacing.edgeNode': '50',
+      'elk.spacing.edgeNode': '60',
       'elk.spacing.edgeEdge': '30',
-      'elk.layered.spacing.edgeNodeBetweenLayers': '40',
-      'elk.layered.spacing.edgeEdgeBetweenLayers': '25',
-      // Reserve room for an edge label (~ width × height of a merged label).
-      // ELK uses this to bias spacing when labels are declared as nodes.
-      'elk.spacing.edgeLabel': '12',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '60',
+      'elk.layered.spacing.edgeEdgeBetweenLayers': '30',
+      // Move labels off the edge line and place them just below — keeps the
+      // line visible and stops description text from sitting on the stroke.
+      'elk.edgeLabels.inline': 'false',
+      'elk.layered.edgeLabels.sideSelection': 'SMART_DOWN',
+      // Padding between a label and the edge / neighbour nodes. Combined with
+      // the per-label width/height supplied above, this drives layer spacing
+      // so multi-line merged labels don't overlap nodes.
+      'elk.spacing.edgeLabel': '14',
       'elk.layered.crossingMinimization.semiInteractive': 'true',
     },
     children: rootElkChildren,

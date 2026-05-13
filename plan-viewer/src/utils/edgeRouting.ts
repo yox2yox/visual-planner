@@ -1,4 +1,5 @@
 import type { ArchitectureEdge, DiffEdge, EdgeDiffStatus } from '../types'
+import { composeGroupLabel, groupEdgesByPair, pairKey } from './edgeLabels'
 
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
@@ -44,11 +45,6 @@ export function pickSides(a: PositionedNode, b: PositionedNode): { source: Side;
 
 export function handleId(side: Side, kind: 'source' | 'target'): string {
   return `${side}-${kind === 'source' ? 's' : 't'}`
-}
-
-/** A canonical key for an unordered pair {a, b}. */
-function pairKey(a: string, b: string): string {
-  return a < b ? `${a}__${b}` : `${b}__${a}`
 }
 
 export interface RoutedEdgeInput {
@@ -103,45 +99,26 @@ export function routeEdges(
   positions: Map<string, PositionedNode>,
   edges: RoutedEdgeInput[]
 ): RoutedEdgeOutput[] {
-  // Group by unordered pair, dropping edges with unknown endpoints.
-  const groups = new Map<string, RoutedEdgeInput[]>()
-  for (const edge of edges) {
-    if (!positions.has(edge.source) || !positions.has(edge.target)) continue
-    const key = pairKey(edge.source, edge.target)
-    const list = groups.get(key) ?? []
-    list.push(edge)
-    groups.set(key, list)
-  }
+  // Drop edges with unknown endpoints before grouping so layout-routing stays
+  // in sync with the ELK input that the caller built.
+  const known = edges.filter(
+    (edge) => positions.has(edge.source) && positions.has(edge.target)
+  )
 
+  const groups = groupEdgesByPair(known)
   const result: RoutedEdgeOutput[] = []
 
-  for (const list of groups.values()) {
-    // Determine the "primary" direction. We pick the direction of the
-    // lowest-order edge in the group so that the visual arrow follows the
-    // earliest interaction in time, which matches user expectation for
+  for (const group of groups) {
+    // The lowest-order edge sets the primary direction so the visual arrow
+    // follows the earliest interaction — that matches user expectation for
     // numbered flows.
-    const sorted = [...list].sort((a, b) => a.order - b.order)
-    const primary = sorted[0]
+    const { edges: sorted, primary, hasReverse } = group
     const primarySource = primary.source
     const primaryTarget = primary.target
 
     const a = positions.get(primarySource)!
     const b = positions.get(primaryTarget)!
     const { source: sourceSide, target: targetSide } = pickSides(a, b)
-
-    const hasReverse = sorted.some(
-      (e) => e.source === primaryTarget && e.target === primarySource
-    )
-
-    // Build the composed label. When there's only one underlying edge keep it
-    // as-is; otherwise join with newlines so each underlying edge stays
-    // readable. Reverse-direction edges are prefixed with "←" to disambiguate.
-    const labelLines = sorted.map((e) => {
-      const text = `${e.order}. ${e.label}${e.data ? ` / ${e.data}` : ''}`
-      if (sorted.length === 1) return text
-      const reverse = e.source === primaryTarget && e.target === primarySource
-      return `${reverse ? '← ' : '→ '}${text}`
-    })
 
     // Choose representative style: prefer "added" > "removed" > "changed" >
     // first one. This keeps diff colours visible when a merged group mixes
@@ -171,7 +148,7 @@ export function routeEdges(
       target: primaryTarget,
       sourceHandle: handleId(sourceSide, 'source'),
       targetHandle: handleId(targetSide, 'target'),
-      label: labelLines.join('\n'),
+      label: composeGroupLabel(group),
       animated,
       type,
       style: styleSource.style ?? '',

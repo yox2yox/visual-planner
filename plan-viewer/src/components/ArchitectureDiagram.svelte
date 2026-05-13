@@ -292,9 +292,11 @@
       markerStart: r.markerStart,
       // Multi-line labels are produced for merged edges; keep them readable.
       labelStyle: r.merged ? 'white-space: pre; font-size: 11px;' : 'font-size: 11px;',
-      labelBgPadding: [6, 4],
-      labelBgBorderRadius: 4,
-      labelBgStyle: 'fill: white; fill-opacity: 0.9;',
+      // Opaque background + thin border so the edge line never bleeds through
+      // the description text and the label reads as a chip.
+      labelBgPadding: [10, 6],
+      labelBgBorderRadius: 6,
+      labelBgStyle: 'fill: white; stroke: #cbd5e1; stroke-width: 1;',
     }))
   })
 </script>
