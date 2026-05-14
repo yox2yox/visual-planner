@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { SvelteFlow, Background } from '@xyflow/svelte'
   import '@xyflow/svelte/dist/style.css'
   import type { Node, Edge } from '@xyflow/svelte'
@@ -132,11 +133,15 @@
     }
   }
 
-  function toSvelteFlowNode(layoutNode: ElkLayoutNode, selectedId: string | null): Node {
+  function toSvelteFlowNode(
+    layoutNode: ElkLayoutNode,
+    selectedId: string | null,
+    position: { x: number; y: number }
+  ): Node {
     const isSelected = selectedId === layoutNode.item.id
     return {
       id: layoutNode.id,
-      position: layoutNode.position,
+      position,
       type: 'architectureGlossary',
       data: makeNodeData(layoutNode.item, layoutNode.isGroup),
       style: layoutNode.isGroup
@@ -250,8 +255,16 @@
   })
 
   // Map ELK nodes → Svelte Flow nodes when either layout or selection changes.
+  // Preserve user-dragged positions across re-runs (e.g. when toggling tooltips)
+  // by keying off the previous nodes array; only fall back to ELK's position
+  // when a node is newly introduced.
   $effect(() => {
-    nodes = layoutNodes.map((ln) => toSvelteFlowNode(ln, selectedId))
+    const previousPositions = untrack(
+      () => new Map(nodes.map((n) => [n.id, n.position]))
+    )
+    nodes = layoutNodes.map((ln) =>
+      toSvelteFlowNode(ln, selectedId, previousPositions.get(ln.id) ?? ln.position)
+    )
   })
 
   // Compose routed edges from architecture/diff inputs + positions.
