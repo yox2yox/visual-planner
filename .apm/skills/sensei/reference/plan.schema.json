@@ -35,7 +35,7 @@
   "$defs": {
     "GlossaryItem": {
       "type": "object",
-      "required": ["id", "type", "name"],
+      "required": ["id", "type", "name", "icon"],
       "additionalProperties": false,
       "description": "アーキテクチャ図に登場する人物・要素・概念。glossary パネルとノードの両方の元データ",
       "properties": {
@@ -47,7 +47,7 @@
         },
         "name":           { "type": "string", "description": "ノードに表示される短いラベル" },
         "description":    { "type": "string", "description": "クリック時に詳細パネルに表示される" },
-        "icon":           { "type": "string", "description": "絵文字または1文字のグリフ。type ごとのデフォルトあり" },
+        "icon":           { "type": "string", "description": "このアイテムを表す絵文字" },
         "parentId":       { "type": "string", "description": "別の glossary 項目 id。最大3階層までネスト可" },
         "persona":        { "type": "string", "description": "解説スタイルの役割名（人物）" },
         "analogy":        { "type": "string", "description": "メタファー世界での対応物" },
