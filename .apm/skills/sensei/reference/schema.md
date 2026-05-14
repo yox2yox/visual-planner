@@ -52,7 +52,8 @@ Choose the layer required by the change being explained. A class-local change ma
   "persona":     "string — optional role-name as a person, kaisetsu style",
   "analogy":     "string — optional metaphor-world equivalent",
   "responsibility": "string — optional plain-language duty",
-  "evidence":    [ /* EvidenceRef[] — optional file/line references */ ]
+  "evidence":    [ /* EvidenceRef[] — optional file/line references */ ],
+  "codeSnippets": [ /* CodeSnippet[] — optional collapsible code excerpts shown in the panel card and tooltip */ ]
 }
 ```
 
@@ -220,6 +221,30 @@ Use one metaphor throughout the plan. The viewer shows this near the title so re
 ```
 
 `path` is required when an evidence item is present. Line numbers are optional but should be included for code-backed plans whenever known.
+
+## CodeSnippet
+
+Attached to a `GlossaryItem` via `codeSnippets[]`. Rendered as a collapsible accordion under the
+glossary card (panel) and at the bottom of the hover tooltip (chip). Use when a short code excerpt
+explains the item more directly than prose — e.g. the signature of the function being introduced,
+the schema of a table, the shape of a request/response payload. Prefer one or two short snippets
+(under ~20 lines each); long files belong in `evidence` as line references, not inlined here.
+
+```jsonc
+{
+  "language":  "string — optional Prism language id (ts, js, tsx, py, go, rust, json, sql, ...). Drives syntax highlighting",
+  "code":      "string | string[] — required. Array elements are joined with '\\n'. Leading indentation common to all lines is dedented automatically; CRLF and tabs are normalized",
+  "label":     "string — optional header text. If omitted, the header is derived from path/startLine/endLine, or falls back to 'code'",
+  "path":      "string — optional source file path shown in the header",
+  "startLine": 10,
+  "endLine":   25
+}
+```
+
+- `code` is rendered verbatim (HTML-escaped). Do not pre-escape.
+- `label` wins over the auto-derived header. Use it for things like `"OpenAPI 抜粋"` or `"型定義"`.
+- `path` + line numbers are display-only here; they do not have to match an `evidence[]` entry, though keeping them aligned helps readers.
+- If you only want a header without showing line numbers, omit `startLine`/`endLine`.
 
 ## Minimal example (single pair, legacy form)
 
