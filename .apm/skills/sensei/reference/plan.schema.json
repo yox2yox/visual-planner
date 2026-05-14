@@ -64,7 +64,7 @@
       "properties": {
         "title":         { "type": "string", "description": "セクションヘッダ。空文字 '' でヘッダを非表示にできる" },
         "description":   { "type": "string", "description": "タイトル下に表示される段落。ペアの目的を1〜2文で示す" },
-        "currentState":  { "$ref": "#/$defs/State", "description": "AS-IS（変更前の姿）。説明だけのペアでは省略する" },
+        "currentState":  { "$ref": "#/$defs/State", "description": "AS-IS（変更前の姿）。" },
         "proposedState": { "$ref": "#/$defs/State", "description": "TO-BE（変更後の姿）。現状解説のみのペアでは省略する" },
         "comparison":    { "type": "array", "items": { "$ref": "#/$defs/ComparisonRow" }, "description": "before/after の対比表。何がどう変わり、なぜ良いのかを並べる" },
         "safeguards":    { "type": "array", "items": { "type": "string" }, "description": "防御的設計・バリデーション・フォールバックなどの注意事項" },
