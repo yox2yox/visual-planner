@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { GlossaryItem } from '../types'
-  import { glossaryTypeBadgeColors, glossaryTypeColors, glossaryTypeIcons, glossaryTypeLabels } from '../utils/glossaryDisplay'
+  import { glossaryItemIcon, glossaryTypeBadgeColors, glossaryTypeColors, glossaryTypeLabels } from '../utils/glossaryDisplay'
   import { glossaryLinksToPlainText } from '../utils/glossaryLinks'
   import CodeAccordion from './CodeAccordion.svelte'
 
@@ -24,7 +24,7 @@
 >
   <span class="flex items-start gap-2">
     <span class="flex min-w-0 flex-1 items-center gap-2">
-      <span class="text-lg leading-none">{item.icon ?? glossaryTypeIcons[item.type]}</span>
+      <span class="emoji-font text-lg leading-none">{glossaryItemIcon(item)}</span>
       <span class="rounded px-2 py-0.5 text-[11px] font-medium leading-4 {glossaryTypeBadgeColors[item.type]}">
         {glossaryTypeLabels[item.type]}
       </span>

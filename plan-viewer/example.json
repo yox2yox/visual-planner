@@ -76,6 +76,7 @@
       "type": "server",
       "name": "ユーザーサービス",
       "description": "ユーザー情報のCRUDを提供するマイクロサービス",
+      "icon": "👤",
       "parentId": "backend",
       "codeSnippets": [
         {

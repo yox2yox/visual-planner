@@ -1,3 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --emoji-font-stack: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji',
+      'Segoe UI Symbol', 'Twemoji Mozilla', 'EmojiOne Color', sans-serif;
+  }
+
+  body {
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', 'Hiragino Kaku Gothic ProN',
+      'Hiragino Sans', Meiryo, sans-serif, var(--emoji-font-stack);
+  }
+}
+
+@layer utilities {
+  .emoji-font {
+    font-family: var(--emoji-font-stack);
+    font-feature-settings: 'liga';
+  }
+}

@@ -1,14 +1,8 @@
-import type { GlossaryType } from '../types'
+import type { GlossaryItem, GlossaryType } from '../types'
 
-export const glossaryTypeIcons: Record<GlossaryType, string> = {
-  term: '📖',
-  client: '💻',
-  server: '🖥️',
-  'cloud-service': '☁️',
-  class: '📦',
-  function: 'ƒ',
-  db: '🗄️',
-  table: '▦',
+export function glossaryItemIcon(item: Pick<GlossaryItem, 'icon' | 'name'>): string {
+  if (item.icon && item.icon.trim()) return item.icon
+  return [...(item.name ?? '')][0] ?? '•'
 }
 
 export const glossaryTypeColors: Record<GlossaryType, string> = {
