@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sensei.local/plan.schema.json",
+  "title": "Plan",
+  "type": "object",
+  "required": ["title", "description", "glossary"],
+  "additionalProperties": false,
+  "properties": {
+    "title":        { "type": "string", "description": "ページ見出しとして表示される" },
+    "description":  { "type": "string", "description": "タイトル直下に表示される一段落の概要" },
+    "metaphor":     { "$ref": "#/$defs/Metaphor", "description": "任意だが強く推奨" },
+    "takeaway":     { "type": "string", "description": "任意の一文「ひと言で」サマリー" },
+    "evidence":     { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } },
+    "glossary": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/GlossaryItem" }
+    },
+    "pairs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/StatePair" },
+      "description": "複数ペア形式（推奨）。指定する場合は currentState/proposedState を併用不可"
+    },
+    "currentState":  { "$ref": "#/$defs/State", "description": "レガシー単一ペア形式の before" },
+    "proposedState": { "$ref": "#/$defs/State", "description": "レガシー単一ペア形式の after" }
+  },
+  "not": {
+    "anyOf": [
+      { "required": ["pairs", "currentState"] },
+      { "required": ["pairs", "proposedState"] }
+    ]
+  },
+  "$defs": {
+    "GlossaryItem": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id":   { "type": "string", "description": "glossary[] 内で一意。parentId と architectureEdges から参照される" },
+        "type": {
+          "type": "string",
+          "enum": ["term", "client", "server", "cloud-service", "class", "function", "db", "table"]
+        },
+        "name":           { "type": "string", "description": "ノードに表示される短いラベル" },
+        "description":    { "type": "string", "description": "クリック時に詳細パネルに表示される" },
+        "icon":           { "type": "string", "description": "絵文字または1文字のグリフ。type ごとのデフォルトあり" },
+        "parentId":       { "type": "string", "description": "別の glossary 項目 id。最大3階層までネスト可" },
+        "persona":        { "type": "string", "description": "解説スタイルの役割名（人物）" },
+        "analogy":        { "type": "string", "description": "メタファー世界での対応物" },
+        "responsibility": { "type": "string", "description": "平易な言葉での責務" },
+        "evidence":       { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } },
+        "codeSnippets":   { "type": "array", "items": { "$ref": "#/$defs/CodeSnippet" } }
+      }
+    },
+    "StatePair": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title":         { "type": "string", "description": "セクションヘッダ。空文字 '' でヘッダを非表示にできる" },
+        "description":   { "type": "string" },
+        "currentState":  { "$ref": "#/$defs/State" },
+        "proposedState": { "$ref": "#/$defs/State" },
+        "comparison":    { "type": "array", "items": { "$ref": "#/$defs/ComparisonRow" } },
+        "safeguards":    { "type": "array", "items": { "type": "string" } },
+        "takeaway":      { "type": "string" },
+        "evidence":      { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } }
+      }
+    },
+    "State": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description":       { "type": "string" },
+        "architectureEdges": { "type": "array", "items": { "$ref": "#/$defs/ArchitectureEdge" } },
+        "diagram":           { "$ref": "#/$defs/DiagramOptions" },
+        "storyTitle":        { "type": "string" },
+        "scenes":            { "type": "array", "items": { "$ref": "#/$defs/StoryScene" } },
+        "takeaway":          { "type": "string" }
+      }
+    },
+    "ArchitectureEdge": {
+      "type": "object",
+      "required": ["order", "source", "target", "label", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "order":  { "type": "integer", "minimum": 1 },
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "label":  { "type": "string" },
+        "data":   { "type": "string" },
+        "sourcePosition": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+        "targetPosition": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+        "edgeType":       { "type": "string", "enum": ["default", "straight", "step", "smoothstep"] },
+        "edgeStyle":      { "type": "string", "enum": ["solid", "dashed", "dotted", "bold"] },
+        "animated":       { "type": "boolean" }
+      }
+    },
+    "DiagramOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "nodePositions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" }
+            }
+          }
+        },
+        "edges": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sourcePosition": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+              "targetPosition": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
+              "type":     { "type": "string", "enum": ["default", "straight", "step", "smoothstep"] },
+              "style":    { "type": "string", "enum": ["solid", "dashed", "dotted", "bold"] },
+              "animated": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "Metaphor": {
+      "type": "object",
+      "required": ["title", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "title":       { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "StoryScene": {
+      "type": "object",
+      "required": ["title", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "title":    { "type": "string", "minLength": 1 },
+        "actor":    { "type": "string" },
+        "action":   { "type": "string", "minLength": 1 },
+        "result":   { "type": "string" },
+        "edgeRefs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" } }
+      }
+    },
+    "ComparisonRow": {
+      "type": "object",
+      "required": ["label", "current", "proposed"],
+      "additionalProperties": false,
+      "properties": {
+        "label":    { "type": "string" },
+        "current":  { "type": "string" },
+        "proposed": { "type": "string" },
+        "note":     { "type": "string" }
+      }
+    },
+    "EvidenceRef": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path":      { "type": "string", "minLength": 1 },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine":   { "type": "integer", "minimum": 1 },
+        "label":     { "type": "string" }
+      }
+    },
+    "CodeSnippet": {
+      "type": "object",
+      "required": ["code"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string" },
+        "code": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" } }
+          ]
+        },
+        "label":     { "type": "string" },
+        "path":      { "type": "string" },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "endLine":   { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
