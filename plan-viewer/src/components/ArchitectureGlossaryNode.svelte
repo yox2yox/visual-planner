@@ -70,7 +70,7 @@
       class="inline-flex min-w-0 items-center gap-1.5 rounded text-left font-semibold text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
       onkeydown={handleKeydown}
     >
-      <span class="shrink-0">{item.icon}</span>
+      <span class="emoji-font shrink-0">{item.icon}</span>
       <span class="min-w-0 truncate">{item.name}</span>
     </button>
     {#if data.tooltipVisible}

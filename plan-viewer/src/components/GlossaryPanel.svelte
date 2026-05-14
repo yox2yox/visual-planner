@@ -6,9 +6,9 @@
   import { buildTree, filterTree, flattenTree, type TreeNode } from '../utils/filter'
   import { getGlossaryAncestorIds } from '../utils/glossaryLinks'
   import {
+    glossaryItemIcon,
     glossaryTypeBadgeColors,
     glossaryTypeColors,
-    glossaryTypeIcons,
     glossaryTypeLabels,
   } from '../utils/glossaryDisplay'
   import { selectedGlossaryId } from '../stores'
@@ -23,14 +23,14 @@
 
   const tabs: { value: Tab; label: string }[] = [
     { value: 'all', label: 'すべて' },
-    { value: 'term', label: '📖 用語' },
-    { value: 'client', label: '💻 クライアント' },
-    { value: 'server', label: '🖥️ サーバー' },
-    { value: 'cloud-service', label: '☁️ クラウドサービス' },
-    { value: 'class', label: '📦 クラス' },
-    { value: 'function', label: 'ƒ 関数' },
-    { value: 'db', label: '🗄️ DB' },
-    { value: 'table', label: '▦ テーブル' },
+    { value: 'term', label: '用語' },
+    { value: 'client', label: 'クライアント' },
+    { value: 'server', label: 'サーバー' },
+    { value: 'cloud-service', label: 'クラウドサービス' },
+    { value: 'class', label: 'クラス' },
+    { value: 'function', label: '関数' },
+    { value: 'db', label: 'DB' },
+    { value: 'table', label: 'テーブル' },
   ]
 
   let tree = $derived(buildTree(items))
@@ -156,7 +156,7 @@
             {:else}
               <span class="w-5 flex-shrink-0"></span>
             {/if}
-            <span class="text-lg">{node.item.icon ?? glossaryTypeIcons[node.item.type]}</span>
+            <span class="emoji-font text-lg">{glossaryItemIcon(node.item)}</span>
             <span class="text-xs font-medium px-2 py-0.5 rounded {glossaryTypeBadgeColors[node.item.type]}">
               {glossaryTypeLabels[node.item.type]}
             </span>
