@@ -1,252 +1,68 @@
-# Plan JSON Schema
+# Plan スキーマ — リファレンス
 
-Reference for the JSON payload consumed by the `viewer/` bundle via the `?plan=<base64url>` query parameter.
+`viewer/` バンドルが読み込む JSON ペイロードの仕様。
 
-## Top-level shape
+## スキーマ本体
 
-```jsonc
-{
-  "title": "string — shown as the page heading",
-  "description": "string — one-paragraph summary shown below the title",
-  "metaphor": { /* Metaphor — optional but strongly recommended */ },
-  "takeaway": "string — optional one-sentence 'ひと言で' summary",
-  "evidence": [ /* EvidenceRef[] — optional top-level file/line references */ ],
-  "glossary": [ /* GlossaryItem[] — required, at least one */ ],
+機械可読な定義は [`plan.schema.json`](./plan.schema.json) を参照（JSON Schema Draft 2020-12）。
+`$defs` に以下のサブタイプを定義している：
 
-  // Pick ONE of the following state layouts (never both):
+| `$defs` キー       | 用途                                                   |
+| ------------------- | ------------------------------------------------------ |
+| `GlossaryItem`      | glossary[] の項目                                     |
+| `StatePair`         | `pairs[]` の各ペア                                    |
+| `State`             | `currentState` / `proposedState`                      |
+| `ArchitectureEdge`  | `architectureEdges[]` の各辺                          |
+| `DiagramOptions`    | `diagram` の手動レイアウト/描画ヒント                 |
+| `Metaphor`          | `metaphor`                                            |
+| `StoryScene`        | `scenes[]` の各シーン                                 |
+| `ComparisonRow`     | `comparison[]` の各行                                 |
+| `EvidenceRef`       | `evidence[]` のファイル/行参照                        |
+| `CodeSnippet`       | `codeSnippets[]` のコード抜粋                         |
 
-  // A) Multi-pair (preferred when the plan is non-trivial — see "Pair vs. top-level" below)
-  "pairs": [ /* StatePair[] — non-empty when present */ ],
+## ビューア挙動の補足
 
-  // B) Legacy single-pair shortcut (kept for backwards compatibility)
-  "currentState":  { /* State — optional. Omit if there is no 'before' */ },
-  "proposedState": { /* State — optional. Omit if there is no 'after'  */ }
-}
+- `pairs` がある場合はそれを使う。表示すべき state・comparison・safeguard・takeaway・evidence・description のいずれも持たないペアは黙って捨てられる。
+- そうでなく `currentState` または `proposedState` がある場合は、無題の単一ペアにラップされる。
+- どちらも無い場合は glossary のみが描画される。
+- 各 state のアーキテクチャ図には、その state の `architectureEdges[].source` / `.target` から参照される glossary ノードのみが描画される。未参照の glossary 項目はパネルには残るが、図中のノードとしては現れない。
+- `pairs` とトップレベル `currentState`/`proposedState` を同時に定義するとバリデーションエラー（スキーマの `not` で表現）。
+
+## JSON Schema では検査しきれない制約
+
+以下は `scripts/lib/plan-schema.zod.mjs` の `validateReferences()` で別途検証される：
+
+- すべての `glossary[].parentId` は別の `glossary[].id` を参照する（順序非依存）。
+- `parentId` チェーンに循環があってはならない。
+- glossary のネスト深さは 1〜3。深さ 4 以降はビューから捨てられる。
+- すべての `architectureEdges[].source` / `.target` は `glossary[].id` のいずれかを指す。
+- 各 `State` 内の `architectureEdges[].order` は `1` から始まる連番。
+- すべての `scenes[].edgeRefs[]` は同じ state の `architectureEdges[].order` に存在する番号。
+- `scenes[].actor` は `glossary[].id` を指す。
+- `diagram.nodePositions` のキーは `glossary[].id` に存在する。
+- `diagram.edges` のキーが `"source->target"` 形式なら両端が `glossary[].id` に存在、`"<order>"` 形式ならその order が同じ state に存在する。
+
+## 検証方法
+
+```bash
+# 単体検証（exit 0=valid、exit 1=invalid を返す CLI）
+node scripts/validate_plan.mjs path/to/plan.json
+
+# HTML 生成（内部で validate_plan を呼ぶ）
+node scripts/make_plan.mjs path/to/plan.json /abs/out/basename
 ```
 
-Viewer behaviour:
-- If `pairs` is present, it is used. Pairs with no visible state, comparison, safeguard, takeaway, evidence, or description are silently dropped.
-- Otherwise, if `currentState` and/or `proposedState` are present, they are wrapped into a single untitled pair.
-- If neither is present, only the glossary is rendered.
-- Each state architecture diagram renders only glossary nodes referenced by that state's `architectureEdges[].source` / `architectureEdges[].target`. Unused glossary items stay in the glossary panel but do not appear as extra diagram nodes.
+## ペア vs トップレベル（分割の判断基準）
 
-Defining `pairs` together with top-level `currentState`/`proposedState` is a validation error.
+以下のいずれかに該当する場合は `pairs` を推奨：
 
-## GlossaryItem
+- 1 つの state に約 10 本以上のアーキテクチャエッジが含まれる、または
+- 1 つの state が約 10 個以上の glossary ノードに触れる、または
+- プランが互いに独立した複数の設計関心事（認証境界・API 境界・永続化境界など）を扱い、それぞれ別の図にした方が分かりやすい。
 
-`glossary[]` defines the items needed to explain the architecture diagrams described by `architectureEdges`.
-Use only the granularity required by those diagrams: components, layers, functions, storage,
-external systems, contracts, and data concepts that appear as sources, targets, or payloads.
-Choose the layer required by the change being explained. A class-local change may only need
-`function` nodes; a cross-boundary architecture change may need `client`, `server`,
-`cloud-service`, `db`, and `table` nodes.
+各ペアは、`architectureEdges` がある場合、自身のヘッダの下に AS-IS / TO-BE のアーキテクチャ図を描画する。アーキテクチャ説明が不要なペアでは、state 図を省略し、説明は `description`・`comparison`・`safeguards`・`takeaway`・`evidence` に寄せる。
 
-```jsonc
-{
-  "id":          "string — unique within glossary[]; used by parentId and architectureEdges",
-  "type":        "term" | "client" | "server" | "cloud-service" | "class" | "function" | "db" | "table",
-  "name":        "string — short label shown on the node",
-  "description": "string — shown in the detail panel on click",
-  "icon":        "string — emoji or single glyph. Optional. Defaults by type",
-  "parentId":    "string — id of another glossary item. Optional. Nests this node under the parent (max 3 levels — deeper is dropped)",
-  "persona":     "string — optional role-name as a person, kaisetsu style",
-  "analogy":     "string — optional metaphor-world equivalent",
-  "responsibility": "string — optional plain-language duty",
-  "evidence":    [ /* EvidenceRef[] — optional file/line references */ ],
-  "codeSnippets": [ /* CodeSnippet[] — optional collapsible code excerpts shown in the panel card and tooltip */ ]
-}
-```
-
-### Types
-
-- `client` — a user-facing client such as a Web browser or mobile app
-- `server` — a server-side application, service, or process
-- `cloud-service` — managed cloud infrastructure such as S3, Lambda, queues, or hosted auth
-- `class` — an object-oriented class
-- `function` — a function or class method
-- `db` — a database
-- `table` — a database table
-- `term` — a domain concept, standard, payload concept, or external reference
-
-### Nesting rules
-
-- `parentId` must reference an `id` that exists earlier OR later in the array (order-independent).
-- Depth 1 (root) → Depth 2 → Depth 3 is rendered. Depth 4+ nodes are dropped from the view.
-- Cycles in `parentId` are not allowed.
-
-## StatePair
-
-```jsonc
-{
-  "title":         "string — shown as the pair's section header. Required field; empty string '' is allowed and hides the header",
-  "description":   "string — optional paragraph shown under the title",
-  "currentState":  { /* State — optional */ },
-  "proposedState": { /* State — optional */ },
-  "comparison":    [ /* ComparisonRow[] — optional before/after table */ ],
-  "safeguards":    [ "string — optional defensive details or caveats" ],
-  "takeaway":      "string — optional pair-level 'ひと言で'",
-  "evidence":      [ /* EvidenceRef[] — optional file/line references */ ]
-}
-```
-
-A pair with both `currentState` and `proposedState` omitted can still render comparison, safeguards, takeaway, evidence, and description. If it has none of those, it is dropped from the rendered output.
-
-### Pair vs. top-level (when to split)
-
-Prefer `pairs` when any of the following apply:
-
-- a single state contains more than ~10 architecture edges, or
-- a single state touches more than ~10 glossary nodes, or
-- the plan covers multiple independent design concerns (e.g. auth boundary, API boundary, persistence boundary) that make sense on their own diagrams.
-
-Each pair renders its own AS-IS / TO-BE architecture diagrams under its own header when `architectureEdges` are present. Splitting keeps the diagrams readable; cramming everything into one pair (or the legacy top-level form) makes them hard to follow once the plan grows. If a pair does not need architecture explanation, omit the state diagram and keep the explanation in `description`, `comparison`, `safeguards`, `takeaway`, or `evidence`.
-
-## State
-
-```jsonc
-{
-  "description":  "string — paragraph explaining this snapshot",
-  "architectureEdges": [ /* ArchitectureEdge[] — optional architecture-diagram edges; omit or leave empty when no diagram is needed */ ],
-  "diagram":      { /* DiagramOptions — optional manual layout/rendering hints */ },
-  "storyTitle":   "string — optional title for the chronological explanation",
-  "scenes":       [ /* StoryScene[] — optional kaisetsu-style story */ ],
-  "takeaway":     "string — optional state-level one-liner"
-}
-```
-
-## ArchitectureEdge
-
-```jsonc
-{
-  "order":  "number — edge number within this state's architecture diagram; starts at 1 and increments by 1",
-  "source": "string — glossary id where the dependency, call, boundary, or handoff starts",
-  "target": "string — glossary id that receives that dependency, call, boundary, or handoff",
-  "label":  "string — short architecture relationship or action phrase shown on the edge (e.g. 'validates token')",
-  "data":   "string — payload, entity, responsibility, contract, or result carried on this edge (e.g. 'AuthToken')",
-
-  "sourcePosition": "top" | "right" | "bottom" | "left",
-  "targetPosition": "top" | "right" | "bottom" | "left",
-  "edgeType":       "default" | "straight" | "step" | "smoothstep",
-  "edgeStyle":      "solid" | "dashed" | "dotted" | "bold",
-  "animated":       "boolean"
-}
-```
-
-Both `source` and `target` must exist in `glossary[]`.
-`architectureEdges` are architecture-diagram edges: read them by `order` to understand which pieces exist, how they connect, and why the boundary or handoff matters. They are not required for every pair and should not be used to force a diagram onto explanation-only material.
-Within each `State`, `order` values must be consecutive numbers: `1`, `2`, `3`, ...
-If a state has no `architectureEdges`, the viewer renders its text/narrative but skips the graph for that state.
-
-`sourcePosition`, `targetPosition`, `edgeType`, `edgeStyle`, and `animated` are optional rendering hints. Use them only when the automatic layout makes an important connection hard to follow.
-
-## DiagramOptions
-
-`diagram` is optional and exists only for architecture-diagram readability tuning. Omit it when the default diagram is clear enough, and omit the whole `architectureEdges` list when a diagram is not needed.
-
-```jsonc
-{
-  "nodePositions": {
-    "client": { "x": 0, "y": 80 },
-    "server": { "x": 280, "y": 80 },
-    "db":     { "x": 560, "y": 80 }
-  },
-  "edges": {
-    "1": {
-      "sourcePosition": "right",
-      "targetPosition": "left",
-      "type": "smoothstep",
-      "style": "bold",
-      "animated": true
-    },
-    "server->db": {
-      "sourcePosition": "right",
-      "targetPosition": "left",
-      "type": "straight",
-      "style": "dashed"
-    }
-  }
-}
-```
-
-- `nodePositions` is keyed by glossary id and uses diagram coordinates in pixels. If any manual positions are present, the diagram uses a flat manual layout for that state; nodes without positions fall back to a simple grid.
-- `edges` is keyed by either the architecture edge order as a string (`"1"`) or by `"source->target"`. Order keys are preferred when multiple edges connect the same nodes.
-- ArchitectureEdge-level rendering hints override `diagram.edges` for that edge.
-
-## Metaphor
-
-```jsonc
-{
-  "title": "string — short label for the real-world metaphor",
-  "description": "string — how to read the whole plan through that metaphor"
-}
-```
-
-Use one metaphor throughout the plan. The viewer shows this near the title so readers know the mental model before they see the graph.
-
-## StoryScene
-
-```jsonc
-{
-  "title": "string — scene heading, e.g. '場面1: 受付係が注文を受ける'",
-  "actor": "string — optional glossary id for the main actor",
-  "action": "string — what the actor does in plain language",
-  "result": "string — optional result of the scene",
-  "edgeRefs": [1, 2],
-  "evidence": [ /* EvidenceRef[] */ ]
-}
-```
-
-`edgeRefs` must reference architecture edge numbers that exist in the same state's `architectureEdges`. Scenes are rendered above the diagram, so the reader gets the design explanation before reading arrows.
-
-## ComparisonRow
-
-```jsonc
-{
-  "label": "string — viewpoint, e.g. '認証情報の置き場所'",
-  "current": "string — current behaviour",
-  "proposed": "string — proposed behaviour",
-  "note": "string — why this matters, including simple-alternative caveats when useful"
-}
-```
-
-## EvidenceRef
-
-```jsonc
-{
-  "path": "string — file path or source name",
-  "startLine": 10,
-  "endLine": 25,
-  "label": "string — optional explanation"
-}
-```
-
-`path` is required when an evidence item is present. Line numbers are optional but should be included for code-backed plans whenever known.
-
-## CodeSnippet
-
-Attached to a `GlossaryItem` via `codeSnippets[]`. Rendered as a collapsible accordion under the
-glossary card (panel) and at the bottom of the hover tooltip (chip). Use when a short code excerpt
-explains the item more directly than prose — e.g. the signature of the function being introduced,
-the schema of a table, the shape of a request/response payload. Prefer one or two short snippets
-(under ~20 lines each); long files belong in `evidence` as line references, not inlined here.
-
-```jsonc
-{
-  "language":  "string — optional Prism language id (ts, js, tsx, py, go, rust, json, sql, ...). Drives syntax highlighting",
-  "code":      "string | string[] — required. Array elements are joined with '\\n'. Leading indentation common to all lines is dedented automatically; CRLF and tabs are normalized",
-  "label":     "string — optional header text. If omitted, the header is derived from path/startLine/endLine, or falls back to 'code'",
-  "path":      "string — optional source file path shown in the header",
-  "startLine": 10,
-  "endLine":   25
-}
-```
-
-- `code` is rendered verbatim (HTML-escaped). Do not pre-escape.
-- `label` wins over the auto-derived header. Use it for things like `"OpenAPI 抜粋"` or `"型定義"`.
-- `path` + line numbers are display-only here; they do not have to match an `evidence[]` entry, though keeping them aligned helps readers.
-- If you only want a header without showing line numbers, omit `startLine`/`endLine`.
-
-## Minimal example (single pair, legacy form)
+## 最小例（単一ペア、レガシー形式）
 
 ```json
 {
@@ -265,7 +81,7 @@ the schema of a table, the shape of a request/response payload. Prefer one or tw
 }
 ```
 
-## Multi-pair example
+## 複数ペアの例
 
 ```json
 {
@@ -304,24 +120,24 @@ the schema of a table, the shape of a request/response payload. Prefer one or tw
 }
 ```
 
-## Full example
+## 完全な例
 
-See `plan-viewer/example.json` in the repo root for a 3-level nested, dual-state example (session-based auth → JWT migration).
+3 階層ネスト・両 state 入りの例（セッションベース認証 → JWT 移行）は、リポジトリルートの `plan-viewer/example.json` を参照。
 
-## Encoding for the URL
+## URL 用エンコード
 
-The viewer reads its input from `?plan=<urlsafe-base64>`:
+ビューアは `?plan=<urlsafe-base64>` から入力を読む：
 
-1. `JSON.stringify(plan)` — compact (no trailing whitespace helps keep the URL short).
-2. UTF-8 encode.
-3. Base64 encode.
-4. Make URL-safe: `+` → `-`, `/` → `_`.
-5. Strip `=` padding.
+1. `JSON.stringify(plan)` — コンパクトに。
+2. UTF-8 エンコード。
+3. Base64 エンコード。
+4. URL セーフ化：`+` → `-`、`/` → `_`。
+5. `=` のパディングを除去。
 
-`make_url.py` does all of this for you. If you decode by hand, re-add `=` padding until length is a multiple of 4 before calling a standard base64 decoder.
+`make_url.py` がこれらをすべてやってくれる。手動でデコードする場合は、長さが 4 の倍数になるまで `=` のパディングを戻してから標準の base64 デコーダに渡すこと。
 
-## Size guidance
+## サイズの目安
 
-- Chrome's `file://` URL limit is well into the tens of thousands of characters.
-- Base64 inflates bytes by ~33%. A 6 KB JSON produces an ~8 KB URL.
-- If the plan approaches 10 KB of JSON, trim `description` fields before sharing.
+- Chrome の `file://` URL 長制限は数万文字に達する。
+- Base64 はバイト数を約 33% 膨らませる。6 KB の JSON はおおよそ 8 KB の URL になる。
+- プランが 10 KB 近くに達したら、共有前に `description` フィールドを削ぐこと。

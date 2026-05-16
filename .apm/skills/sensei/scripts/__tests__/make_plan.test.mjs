@@ -4,6 +4,7 @@ import { validate, escapeForScriptTag, embedPlan } from '../make_plan.mjs'
 function makePlan(overrides = {}) {
   return {
     title: 't',
+    description: 'd',
     glossary: [
       { id: 'a', type: 'client', name: 'A' },
       { id: 'b', type: 'server', name: 'B' },
@@ -47,14 +48,14 @@ describe('validate (make_plan.mjs)', () => {
 
   it('rejects an empty pairs array', () => {
     const plan = makePlan({ pairs: [] })
-    expect(() => validate(plan)).toThrow(/empty/i)
+    expect(() => validate(plan)).toThrow(/fewer than 1 items/)
   })
 
   it('rejects when pairs[i].title is not a string', () => {
     const plan = makePlan({
       pairs: [{ title: 123, proposedState: { architectureEdges: [okEdge] } }],
     })
-    expect(() => validate(plan)).toThrow(/pairs\[0\]\.title.*string/)
+    expect(() => validate(plan)).toThrow(/\/pairs\/0\/title.*must be string/)
   })
 
   it('rejects when pairs and top-level currentState are both provided', () => {
@@ -62,7 +63,7 @@ describe('validate (make_plan.mjs)', () => {
       currentState: { architectureEdges: [okEdge] },
       pairs: [{ title: 'P', proposedState: { architectureEdges: [okEdge] } }],
     })
-    expect(() => validate(plan)).toThrow(/both.*pairs/i)
+    expect(() => validate(plan)).toThrow(/must NOT be valid/)
   })
 
   it('rejects when pairs[i].currentState.architectureEdges[j].source is unknown (with path in error)', () => {
@@ -101,7 +102,7 @@ describe('validate (make_plan.mjs)', () => {
         ],
       },
     })
-    expect(() => validate(plan)).toThrow(/proposedState\.architectureEdges\[0\]\.order must be 1/)
+    expect(() => validate(plan)).toThrow(/proposedState\.architectureEdges\[0\]\.order:.*must be 1/)
   })
 
   it('accepts kaisetsu narrative fields with evidence and scene edge links', () => {
@@ -184,7 +185,7 @@ describe('validate (make_plan.mjs)', () => {
     const plan = makePlan({
       evidence: [{ label: 'missing path' }],
     })
-    expect(() => validate(plan)).toThrow(/plan\.evidence\[0\]\.path/)
+    expect(() => validate(plan)).toThrow(/\/evidence\/0.*path/)
   })
 })
 
