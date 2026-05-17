@@ -1,6 +1,6 @@
 <script lang="ts">
   import { normalizePlan } from './utils/normalize'
-  import type { Plan, StatePair } from './types'
+  import type { Concern, Example, FlowState, Plan } from './types'
   import Header from './components/Header.svelte'
   import GlossaryPanel from './components/GlossaryPanel.svelte'
   import InlineGlossaryText from './components/InlineGlossaryText.svelte'
@@ -9,7 +9,7 @@
 
   interface LoadResult {
     plan: Plan | null
-    pairs: StatePair[]
+    pairs: Concern[]
     error: string | null
   }
 
@@ -43,8 +43,12 @@
 
   const { plan, pairs, error } = loadPlan()
 
-  function hasArchitectureDiagram(state: StatePair['currentState']): boolean {
-    return Boolean(state?.architectureEdges?.length)
+  function hasArchitectureDiagram(state?: FlowState): boolean {
+    return Boolean(state?.architectureDiagram?.length)
+  }
+
+  function exampleHasAnyState(ex: Example): boolean {
+    return ex.currentState !== undefined || ex.proposedState !== undefined
   }
 </script>
 
@@ -62,63 +66,94 @@
       description={plan.description}
       metaphor={plan.metaphor}
       takeaway={plan.takeaway}
-      evidence={plan.evidence}
       glossary={plan.glossary}
     />
 
     <main class="max-w-7xl mx-auto">
       <GlossaryPanel items={plan.glossary} />
 
-      {#each pairs as pair, i (i)}
+      {#each pairs as concern, i (i)}
         <section class="px-6 py-6 border-t border-gray-200">
-          {#if pair.title}
-            <h2 class="text-2xl font-bold text-gray-900 mb-1">{pair.title}</h2>
-          {/if}
-          {#if pair.description}
-            <p class="text-gray-600 text-sm mb-4">
-              <InlineGlossaryText text={pair.description} glossary={plan.glossary} />
-            </p>
+          {#if concern.title}
+            <h2 class="text-2xl font-bold text-gray-900 mb-3">{concern.title}</h2>
           {/if}
 
-          <NarrativePanel pair={pair} glossary={plan.glossary} />
-
-          {#if pair.currentState}
-            <div class="mt-4">
-              <h3 class="text-lg font-semibold text-gray-800 mb-1">AS-IS（現状）</h3>
-              {#if pair.currentState.description}
-                <p class="text-gray-600 text-sm mb-4">
-                  <InlineGlossaryText text={pair.currentState.description} glossary={plan.glossary} />
-                </p>
-              {/if}
-              {#if hasArchitectureDiagram(pair.currentState)}
-                <ArchitectureDiagram
-                  glossary={plan.glossary}
-                  architectureEdges={pair.currentState.architectureEdges ?? []}
-                  diagram={pair.currentState.diagram}
-                />
-              {/if}
+          {#if concern.takeaway}
+            <div class="mb-4 rounded-lg border border-slate-300 bg-slate-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">ひと言で</p>
+              <p class="mt-1 text-base font-semibold leading-7 text-gray-900">
+                <InlineGlossaryText text={concern.takeaway} glossary={plan.glossary} />
+              </p>
             </div>
           {/if}
 
-          {#if pair.proposedState}
-            <div class="mt-6">
-              <h3 class="text-lg font-semibold text-gray-800 mb-1">TO-BE（変更後）</h3>
-              {#if pair.proposedState.description}
-                <p class="text-gray-600 text-sm mb-4">
-                  <InlineGlossaryText text={pair.proposedState.description} glossary={plan.glossary} />
-                </p>
-              {/if}
-              {#if hasArchitectureDiagram(pair.proposedState)}
-                <ArchitectureDiagram
-                  glossary={plan.glossary}
-                  architectureEdges={pair.proposedState.architectureEdges ?? []}
-                  diagram={pair.proposedState.diagram}
-                  isDiff={pair.currentState !== undefined}
-                  baseArchitectureEdges={pair.currentState?.architectureEdges ?? []}
-                />
-              {/if}
+          {#if concern.safeguards?.length}
+            <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <h3 class="text-sm font-bold text-emerald-900">細かいけど大事な仕組み</h3>
+              <ul class="mt-2 space-y-1">
+                {#each concern.safeguards as item}
+                  <li class="text-sm leading-6 text-emerald-950">
+                    <InlineGlossaryText text={item} glossary={plan.glossary} />
+                  </li>
+                {/each}
+              </ul>
             </div>
           {/if}
+
+          {#each concern.examples ?? [] as example, j (j)}
+            <article class="mt-6 first:mt-0 rounded-xl border-2 border-indigo-200 bg-indigo-50/30 p-5">
+              <div class="flex items-baseline gap-2">
+                <span class="rounded bg-indigo-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">例 {j + 1}</span>
+                {#if example.title}
+                  <h3 class="text-xl font-semibold text-gray-900">{example.title}</h3>
+                {/if}
+              </div>
+              {#if example.condition}
+                <p class="mt-2 text-sm text-gray-700">
+                  <span class="mr-1 font-semibold text-indigo-700">想定:</span>
+                  <InlineGlossaryText text={example.condition} glossary={plan.glossary} />
+                </p>
+              {/if}
+
+              {#if exampleHasAnyState(example)}
+                <NarrativePanel example={example} glossary={plan.glossary} />
+              {/if}
+
+              {#if example.currentState}
+                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div class="mb-2 flex items-center gap-2">
+                    <span class="rounded bg-amber-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">AS-IS</span>
+                    <h4 class="text-base font-semibold text-amber-900">現状の処理の流れ</h4>
+                  </div>
+                  {#if hasArchitectureDiagram(example.currentState)}
+                    <ArchitectureDiagram
+                      glossary={plan.glossary}
+                      architectureEdges={example.currentState.architectureDiagram ?? []}
+                      diagram={example.currentState.diagramOptions}
+                    />
+                  {/if}
+                </div>
+              {/if}
+
+              {#if example.proposedState}
+                <div class="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4">
+                  <div class="mb-2 flex items-center gap-2">
+                    <span class="rounded bg-sky-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">TO-BE</span>
+                    <h4 class="text-base font-semibold text-sky-900">変更後の処理の流れ</h4>
+                  </div>
+                  {#if hasArchitectureDiagram(example.proposedState)}
+                    <ArchitectureDiagram
+                      glossary={plan.glossary}
+                      architectureEdges={example.proposedState.architectureDiagram ?? []}
+                      diagram={example.proposedState.diagramOptions}
+                      isDiff={example.currentState !== undefined}
+                      baseArchitectureEdges={example.currentState?.architectureDiagram ?? []}
+                    />
+                  {/if}
+                </div>
+              {/if}
+            </article>
+          {/each}
         </section>
       {/each}
     </main>

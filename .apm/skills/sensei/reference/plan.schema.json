@@ -3,14 +3,13 @@
   "$id": "https://sensei.local/plan.schema.json",
   "title": "Plan",
   "type": "object",
-  "required": ["title", "description", "glossary"],
+  "required": ["title", "description", "glossary","pairs"],
   "additionalProperties": false,
   "properties": {
     "title":        { "type": "string", "description": "ページ見出しとして表示される" },
     "description":  { "type": "string", "description": "タイトル直下に表示される一段落の概要" },
     "metaphor":     { "$ref": "#/$defs/Metaphor", "description": "任意だが強く推奨" },
     "takeaway":     { "type": "string", "description": "任意の一文「ひと言で」サマリー" },
-    "evidence":     { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" }, "description": "プラン全体に対するファイル/行参照（コード裏付けがあるときに付ける）" },
     "glossary": {
       "type": "array",
       "minItems": 1,
@@ -20,11 +19,9 @@
     "pairs": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/StatePair" },
+      "items": { "$ref": "#/$defs/Concern" },
       "description": "複数ペア形式（推奨）。指定する場合は currentState/proposedState を併用不可"
-    },
-    "currentState":  { "$ref": "#/$defs/State", "description": "レガシー単一ペア形式の before" },
-    "proposedState": { "$ref": "#/$defs/State", "description": "レガシー単一ペア形式の after" }
+    }
   },
   "not": {
     "anyOf": [
@@ -46,43 +43,48 @@
           "description": "項目の種別。図のアイコンや既定スタイルを切り替える。term=ドメイン概念、client=ブラウザ等、server=サーバープロセス、cloud-service=マネージドサービス、class/function=コードシンボル、db/table=データストア"
         },
         "name":           { "type": "string", "description": "ノードに表示される短いラベル" },
-        "description":    { "type": "string", "description": "クリック時に詳細パネルに表示される" },
+        "description":    { "type": "string", "description": "このアイテムに関して簡潔に説明する文章。" },
         "icon":           { "type": "string", "description": "このアイテムを表す絵文字" },
         "parentId":       { "type": "string", "description": "別の glossary 項目 id。最大3階層までネスト可" },
-        "persona":        { "type": "string", "description": "解説スタイルの役割名（人物）" },
         "analogy":        { "type": "string", "description": "メタファー世界での対応物" },
-        "responsibility": { "type": "string", "description": "平易な言葉での責務" },
-        "evidence":       { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" }, "description": "この項目を裏付けるソース上の位置参照" },
-        "codeSnippets":   { "type": "array", "items": { "$ref": "#/$defs/CodeSnippet" }, "description": "パネルとツールチップに表示される折りたたみ式コード抜粋（1〜2個推奨）" }
+        "responsibility": { "type": "string", "description": "メタファー世界での責務" },
+        "evidence":       { "type": "array", "items": { "$ref": "#/$defs/Evidence" }, "description": "この項目を裏付けるソース上の位置参照または実装計画上のソース" }
       }
     },
-    "StatePair": {
+    "Concern": {
       "type": "object",
       "required": ["title"],
       "additionalProperties": false,
-      "description": "1つの設計関心事を扱うペア。AS-IS と TO-BE の片方だけでも、両方持つことも、図無しで説明だけでも可",
+      "description": "1つの設計関心事に対してその説明を行うセクション。複数の例を用いてわかりやすく説明する。",
       "properties": {
         "title":         { "type": "string", "description": "セクションヘッダ。空文字 '' でヘッダを非表示にできる" },
-        "description":   { "type": "string", "description": "タイトル下に表示される段落。ペアの目的を1〜2文で示す" },
-        "currentState":  { "$ref": "#/$defs/State", "description": "AS-IS（変更前の姿）。" },
-        "proposedState": { "$ref": "#/$defs/State", "description": "TO-BE（変更後の姿）。現状解説のみのペアでは省略する" },
-        "comparison":    { "type": "array", "items": { "$ref": "#/$defs/ComparisonRow" }, "description": "before/after の対比表。何がどう変わり、なぜ良いのかを並べる" },
+        "examples":      { "type": "array", "items": { "$ref": "#/$defs/Example" }, "description": "対象の関心ごとに関する例示。代表例やエッジケースなど、設計を説明するために必要な例をいくつかピックアップして記載する。" },
         "safeguards":    { "type": "array", "items": { "type": "string" }, "description": "防御的設計・バリデーション・フォールバックなどの注意事項" },
-        "takeaway":      { "type": "string", "description": "このペアの「ひと言で」まとめ" },
-        "evidence":      { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" }, "description": "ペア固有のファイル/行参照" }
+        "takeaway":      { "type": "string", "description": "この設計を「ひと言で」まとめる。できるだけGlossaryItemで定義したアナロジーを使うなど分かりやすい表現を使って簡潔に表す。" }
+      }
+    },
+    "Example": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "description": "特定の例に関して、現在状態と変更後の状態に対して処理の流れを説明する。",
+      "properties": {
+        "title":         { "type": "string", "description": "例のサブセクションタイトル。" },
+        "condition":     { "type": "string", "description": "どういう状態を想定しているかの説明文。(例: ユーザーがカートに2つ商品を入れて購入を実施する例)"},
+        "currentState":  { "$ref": "#/$defs/State", "description": "AS-IS(例に関して現在どのように処理されているか)。" },
+        "proposedState": { "$ref": "#/$defs/State", "description": "TO-BE(例に関してどのように処理が変更される想定か)。現状解説のみのペアでは省略する" }
       }
     },
     "State": {
       "type": "object",
       "additionalProperties": false,
-      "description": "ある時点でのアーキテクチャのスナップショット（AS-IS または TO-BE）",
+      "description": "例示における処理の流れ。1つの処理がどのような手順でどのような関数やクラスが担当して処理していくかを超わかりやすく説明する。",
       "properties": {
-        "description":       { "type": "string", "description": "このスナップショットの全体説明（図の上に表示される段落）" },
-        "architectureEdges": { "type": "array", "items": { "$ref": "#/$defs/ArchitectureEdge" }, "description": "アーキテクチャ図の辺集合。1から始まる連番（order）で示す依存・呼び出し・受け渡し" },
-        "diagram":           { "$ref": "#/$defs/DiagramOptions", "description": "図の手動レイアウトや描画ヒント（既定で十分なら省略）" },
+        "architectureDiagram": { "type": "array", "items": { "$ref": "#/$defs/ArchitectureEdge" }, "description": "説明用のアーキテクチャ図。辺の集合で表される。scenesで説明した処理の流れをわかりやすくするために使う" },
+        "diagramOptions":      { "$ref": "#/$defs/DiagramOptions", "description": "図の手動レイアウトや描画ヒント（既定で十分なら省略）" },
         "storyTitle":        { "type": "string", "description": "時系列解説のセクションタイトル（例：'受付の流れ'）" },
-        "scenes":            { "type": "array", "items": { "$ref": "#/$defs/StoryScene" }, "description": "時系列の解説シーン。図の上に表示し、辺を読む前に物語を渡す" },
-        "takeaway":          { "type": "string", "description": "この state レベルの一行サマリー" }
+        "scenes":            { "type": "array", "items": { "$ref": "#/$defs/StoryScene" }, "description": "時系列の処理解説シーン。図の上に表示し、辺を読む前に物語を渡す" },
+        "takeaway":          { "type": "string", "description": "この処理の流れを「ひと言で」まとめる。定義済みのアナロジーを使うなどして、わかりやすく簡潔に説明する" }
       }
     },
     "ArchitectureEdge": {
@@ -161,38 +163,27 @@
         "action":   { "type": "string", "minLength": 1, "description": "その主役が何をするかを平易な言葉で書いた本文" },
         "result":   { "type": "string", "description": "場面の結末（受け手に渡るもの、状態の変化など）" },
         "edgeRefs": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "description": "この場面が説明するアーキテクチャ辺の order 配列（同じ state 内に存在する order を指す）" },
-        "evidence": { "type": "array", "items": { "$ref": "#/$defs/EvidenceRef" }, "description": "場面の根拠となるソース上の位置参照" }
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/Evidence" }, "description": "場面の根拠となるソース上の位置参照または実装計画上のソース" }
       }
     },
-    "ComparisonRow": {
+    "Evidence": {
       "type": "object",
-      "required": ["label", "current", "proposed"],
+      "required": [],
       "additionalProperties": false,
-      "description": "AS-IS と TO-BE を1観点で並べる対比表の1行",
+      "description": "プラン中の主張を裏付けるソース上の位置参照または計画中の実装コード",
       "properties": {
-        "label":    { "type": "string", "description": "比較の観点（例：'認証情報の置き場所'）" },
-        "current":  { "type": "string", "description": "現在の挙動・状態" },
-        "proposed": { "type": "string", "description": "提案後の挙動・状態" },
-        "note":     { "type": "string", "description": "この変更がなぜ重要か。単純な代替案で十分でない理由を書く" }
-      }
-    },
-    "EvidenceRef": {
-      "type": "object",
-      "required": ["path"],
-      "additionalProperties": false,
-      "description": "プラン中の主張を裏付けるソース上の位置参照",
-      "properties": {
-        "path":      { "type": "string", "minLength": 1, "description": "ファイルパスまたはソース名（必須）" },
+        "path":      { "type": "string", "minLength": 1, "description": "ファイルパスまたはソース名。計画中の場合はなくてもいい。" },
         "startLine": { "type": "integer", "minimum": 1, "description": "開始行番号（1始まり）。分かるなら必ず付ける" },
         "endLine":   { "type": "integer", "minimum": 1, "description": "終了行番号（1始まり）。範囲の終端" },
-        "label":     { "type": "string", "description": "参照の意図を補足する短い説明" }
+        "label":     { "type": "string", "description": "参照の意図を補足する短い説明" },
+        "codeSnippets":   { "$ref": "#/$defs/CodeSnippet", "description": "裏付けとして説明が必要なコード抜粋。コードすべてを記載せずできるだけ必要な部分に絞って省略できる部分は省略記号などで省略する。" }
       }
     },
     "CodeSnippet": {
       "type": "object",
       "required": ["code"],
       "additionalProperties": false,
-      "description": "glossary 項目に紐付く折りたたみ式のコード抜粋。パネルとツールチップの両方に表示される",
+      "description": "コード抜粋。できるだけ簡潔に、不要な部分は省略記号を使って省略する。",
       "properties": {
         "language": { "type": "string", "description": "Prism の言語 id（ts, js, tsx, py, go, rust, json, sql, ...）。シンタックスハイライトに使う" },
         "code": {

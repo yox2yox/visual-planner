@@ -6,38 +6,37 @@ function makePlan(overrides = {}) {
     title: 't',
     description: 'd',
     glossary: [
-      { id: 'a', type: 'client', name: 'A' },
-      { id: 'b', type: 'server', name: 'B' },
+      { id: 'a', type: 'client', name: 'A', icon: '💻' },
+      { id: 'b', type: 'server', name: 'B', icon: '🖥️' },
     ],
+    pairs: [{ title: 'P' }],
     ...overrides,
   }
 }
 
 const okEdge = { order: 1, source: 'a', target: 'b', label: 'calls', data: 'X' }
 
+function withProposedDiagram(extra = {}) {
+  return makePlan({
+    pairs: [
+      {
+        title: 'P',
+        examples: [
+          { title: 'E', proposedState: { architectureDiagram: [okEdge] } },
+        ],
+        ...extra,
+      },
+    ],
+  })
+}
+
 describe('validate (make_plan.mjs)', () => {
-  it('accepts a plan using the legacy currentState/proposedState', () => {
-    const plan = makePlan({
-      currentState: { architectureEdges: [okEdge] },
-      proposedState: { architectureEdges: [okEdge] },
-    })
-    expect(() => validate(plan)).not.toThrow()
+  it('accepts a plan using the new pairs (Concern[]) format', () => {
+    expect(() => validate(withProposedDiagram())).not.toThrow()
   })
 
-  it('accepts a plan using the new pairs format', () => {
-    const plan = makePlan({
-      pairs: [
-        { title: 'P1', currentState: { architectureEdges: [okEdge] } },
-        { title: '', proposedState: { architectureEdges: [okEdge] } },
-      ],
-    })
-    expect(() => validate(plan)).not.toThrow()
-  })
-
-  it('accepts a pair with neither currentState nor proposedState (viewer will filter)', () => {
-    const plan = makePlan({
-      pairs: [{ title: 'empty' }],
-    })
+  it('accepts a concern with neither examples nor takeaway (viewer will filter)', () => {
+    const plan = makePlan({ pairs: [{ title: 'empty' }] })
     expect(() => validate(plan)).not.toThrow()
   })
 
@@ -53,96 +52,129 @@ describe('validate (make_plan.mjs)', () => {
 
   it('rejects when pairs[i].title is not a string', () => {
     const plan = makePlan({
-      pairs: [{ title: 123, proposedState: { architectureEdges: [okEdge] } }],
+      pairs: [{ title: 123 }],
     })
     expect(() => validate(plan)).toThrow(/\/pairs\/0\/title.*must be string/)
   })
 
-  it('rejects when pairs and top-level currentState are both provided', () => {
+  it('rejects when top-level currentState is provided (legacy format removed)', () => {
     const plan = makePlan({
-      currentState: { architectureEdges: [okEdge] },
-      pairs: [{ title: 'P', proposedState: { architectureEdges: [okEdge] } }],
+      currentState: { architectureDiagram: [okEdge] },
     })
-    expect(() => validate(plan)).toThrow(/must NOT be valid/)
+    expect(() => validate(plan)).toThrow(/additional propert|must NOT have/i)
   })
 
-  it('rejects when pairs[i].currentState.architectureEdges[j].source is unknown (with path in error)', () => {
+  it('rejects when example.currentState.architectureDiagram[j].source is unknown (path in error)', () => {
     const plan = makePlan({
       pairs: [
         {
           title: 'P',
-          currentState: {
-            architectureEdges: [{ order: 1, source: 'ghost', target: 'b', label: 'x', data: 'y' }],
-          },
+          examples: [
+            {
+              title: 'E',
+              currentState: {
+                architectureDiagram: [
+                  { order: 1, source: 'ghost', target: 'b', label: 'x', data: 'y' },
+                ],
+              },
+            },
+          ],
         },
       ],
     })
-    expect(() => validate(plan)).toThrow(/pairs\[0\]\.currentState\.architectureEdges\[0\]\.source/)
+    expect(() => validate(plan)).toThrow(
+      /pairs\[0\]\.examples\[0\]\.currentState\.architectureDiagram\[0\]\.source/,
+    )
   })
 
-  it('rejects when pairs[i].proposedState.architectureEdges[j].target is unknown (with path in error)', () => {
+  it('rejects when example.proposedState.architectureDiagram[j].target is unknown', () => {
     const plan = makePlan({
       pairs: [
         {
           title: 'P',
-          proposedState: {
-            architectureEdges: [{ order: 1, source: 'a', target: 'ghost', label: 'x', data: 'y' }],
-          },
+          examples: [
+            {
+              title: 'E',
+              proposedState: {
+                architectureDiagram: [
+                  { order: 1, source: 'a', target: 'ghost', label: 'x', data: 'y' },
+                ],
+              },
+            },
+          ],
         },
       ],
     })
-    expect(() => validate(plan)).toThrow(/pairs\[0\]\.proposedState\.architectureEdges\[0\]\.target/)
+    expect(() => validate(plan)).toThrow(
+      /pairs\[0\]\.examples\[0\]\.proposedState\.architectureDiagram\[0\]\.target/,
+    )
   })
 
   it('rejects when architecture edges are not numbered consecutively from 1', () => {
     const plan = makePlan({
-      proposedState: {
-        architectureEdges: [
-          { order: 2, source: 'a', target: 'b', label: 'calls', data: 'X' },
-        ],
-      },
+      pairs: [
+        {
+          title: 'P',
+          examples: [
+            {
+              title: 'E',
+              proposedState: {
+                architectureDiagram: [
+                  { order: 2, source: 'a', target: 'b', label: 'calls', data: 'X' },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect(() => validate(plan)).toThrow(/proposedState\.architectureEdges\[0\]\.order:.*must be 1/)
+    expect(() => validate(plan)).toThrow(
+      /proposedState\.architectureDiagram\[0\]\.order:.*must be 1/,
+    )
   })
 
   it('accepts kaisetsu narrative fields with evidence and scene edge links', () => {
     const plan = makePlan({
       metaphor: { title: '受付カウンター', description: '係員の受け渡しとして読む' },
       takeaway: '受付係が確認して案内係へ渡すだけ。',
-      evidence: [{ path: 'src/app.ts', startLine: 10, endLine: 20 }],
       glossary: [
         {
           id: 'a',
           type: 'client',
           name: 'A',
-          persona: '受付係',
+          icon: '🛎️',
           analogy: '入口のカウンター',
           responsibility: '依頼を受け付ける',
           evidence: [{ path: 'src/a.ts', startLine: 1 }],
         },
-        { id: 'b', type: 'server', name: 'B', persona: '案内係' },
+        { id: 'b', type: 'server', name: 'B', icon: '🧑‍💼' },
       ],
       pairs: [
         {
           title: '受付',
-          comparison: [{ label: '渡し方', current: '手渡し', proposed: '番号札', note: '追跡しやすい' }],
           safeguards: ['番号札がない依頼は受け付けない'],
-          evidence: [{ path: 'src/flow.ts' }],
-          proposedState: {
-            architectureEdges: [okEdge],
-            storyTitle: '受付の流れ',
-            scenes: [
-              {
-                title: '場面1: 受付係が依頼を受ける',
-                actor: 'a',
-                action: '受付係が依頼内容を確認して、案内係へ番号札を渡す。',
-                result: '案内係は次に何をすればよいか分かる。',
-                edgeRefs: [1],
-                evidence: [{ path: 'src/flow.ts', startLine: 3, endLine: 8 }],
+          takeaway: '番号札で迷子を防ぐ。',
+          examples: [
+            {
+              title: '通常受付',
+              condition: '依頼者がカウンターに来る',
+              proposedState: {
+                architectureDiagram: [okEdge],
+                storyTitle: '受付の流れ',
+                scenes: [
+                  {
+                    title: '場面1: 受付係が依頼を受ける',
+                    actor: 'a',
+                    action: '受付係が依頼内容を確認して、案内係へ番号札を渡す。',
+                    result: '案内係は次に何をすればよいか分かる。',
+                    edgeRefs: [1],
+                    evidence: [{ path: 'src/flow.ts', startLine: 3, endLine: 8 }],
+                  },
+                ],
+                takeaway: '番号札で迷子を防ぐ。',
               },
-            ],
-            takeaway: '番号札で迷子を防ぐ。',
-          },
+            },
+          ],
         },
       ],
     })
@@ -151,41 +183,68 @@ describe('validate (make_plan.mjs)', () => {
 
   it('rejects scenes that reference unknown architecture edge numbers', () => {
     const plan = makePlan({
-      proposedState: {
-        architectureEdges: [okEdge],
-        scenes: [
-          {
-            title: '場面1',
-            action: '受付係が存在しない手順を説明してしまう。',
-            edgeRefs: [2],
-          },
-        ],
-      },
+      pairs: [
+        {
+          title: 'P',
+          examples: [
+            {
+              title: 'E',
+              proposedState: {
+                architectureDiagram: [okEdge],
+                scenes: [
+                  {
+                    title: '場面1',
+                    action: '受付係が存在しない手順を説明してしまう。',
+                    edgeRefs: [2],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect(() => validate(plan)).toThrow(/scenes\[0\]\.edgeRefs\[0\]/)
+    expect(() => validate(plan)).toThrow(
+      /pairs\[0\]\.examples\[0\]\.proposedState\.scenes\[0\]\.edgeRefs\[0\]/,
+    )
   })
 
   it('rejects scenes whose actor is not in the glossary', () => {
     const plan = makePlan({
-      proposedState: {
-        architectureEdges: [okEdge],
-        scenes: [
-          {
-            title: '場面1',
-            actor: 'ghost',
-            action: '知らない係が急に登場してしまう。',
-          },
-        ],
-      },
+      pairs: [
+        {
+          title: 'P',
+          examples: [
+            {
+              title: 'E',
+              proposedState: {
+                architectureDiagram: [okEdge],
+                scenes: [
+                  {
+                    title: '場面1',
+                    actor: 'ghost',
+                    action: '知らない係が急に登場してしまう。',
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     })
-    expect(() => validate(plan)).toThrow(/scenes\[0\]\.actor/)
+    expect(() => validate(plan)).toThrow(
+      /pairs\[0\]\.examples\[0\]\.proposedState\.scenes\[0\]\.actor/,
+    )
   })
 
-  it('rejects evidence without a path', () => {
+  it('accepts evidence with only a label (path is optional in new schema)', () => {
     const plan = makePlan({
-      evidence: [{ label: 'missing path' }],
+      glossary: [
+        { id: 'a', type: 'client', name: 'A', icon: '💻', evidence: [{ label: 'planned' }] },
+        { id: 'b', type: 'server', name: 'B', icon: '🖥️' },
+      ],
     })
-    expect(() => validate(plan)).toThrow(/\/evidence\/0.*path/)
+    expect(() => validate(plan)).not.toThrow()
   })
 })
 
@@ -225,8 +284,6 @@ describe('embedPlan', () => {
       /<script id="plan-data" type="application\/json">([\s\S]*?)<\/script>/,
     )
     expect(m).not.toBeNull()
-    // The injected content must parse back to the original plan (after unescaping
-    // < etc. — JSON.parse handles those natively).
     const parsed = JSON.parse(m[1])
     expect(parsed).toEqual(plan)
   })
@@ -234,8 +291,6 @@ describe('embedPlan', () => {
   it('handles plans containing "</script>" without breaking HTML parsing', () => {
     const plan = makePlan({ description: 'dangerous </script><img>' })
     const out = embedPlan(viewerHtml, plan)
-    // Only one closing </script> remains (the placeholder's own closer); the
-    // content-bearing occurrence must be escaped.
     const closers = out.match(/<\/script>/gi) ?? []
     expect(closers.length).toBe(1)
     const m = out.match(

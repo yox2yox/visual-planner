@@ -107,14 +107,18 @@
     return node.children.length > 0
   }
 
-  function formatEvidence(item: GlossaryItem): string | null {
-    const ref = item.evidence?.[0]
-    if (!ref) return null
+  function formatEvidenceRef(ref: { path?: string; startLine?: number; endLine?: number }): string {
+    const path = ref.path ?? '計画'
     if (ref.startLine && ref.endLine && ref.endLine !== ref.startLine) {
-      return `${ref.path}:${ref.startLine}-${ref.endLine}`
+      return `${path}:${ref.startLine}-${ref.endLine}`
     }
-    if (ref.startLine) return `${ref.path}:${ref.startLine}`
-    return ref.path
+    if (ref.startLine) return `${path}:${ref.startLine}`
+    return path
+  }
+
+  function firstEvidence(item: GlossaryItem): string | null {
+    const ref = item.evidence?.[0]
+    return ref ? formatEvidenceRef(ref) : null
   }
 </script>
 
@@ -167,14 +171,8 @@
               <InlineGlossaryText text={node.item.description} glossary={items} />
             </p>
           {/if}
-          {#if node.item.persona || node.item.analogy || node.item.responsibility || formatEvidence(node.item)}
+          {#if node.item.analogy || node.item.responsibility || firstEvidence(node.item)}
             <div class="mt-2 ml-7 grid gap-1 text-xs text-gray-700">
-              {#if node.item.persona}
-                <p>
-                  <span class="font-semibold">設計上の役割:</span>
-                  <InlineGlossaryText text={node.item.persona} glossary={items} />
-                </p>
-              {/if}
               {#if node.item.analogy}
                 <p>
                   <span class="font-semibold">たとえると:</span>
@@ -187,14 +185,18 @@
                   <InlineGlossaryText text={node.item.responsibility} glossary={items} />
                 </p>
               {/if}
-              {#if formatEvidence(node.item)}
-                <p><span class="font-semibold">裏付け:</span> <span class="font-mono">{formatEvidence(node.item)}</span></p>
+              {#if firstEvidence(node.item)}
+                <p><span class="font-semibold">裏付け:</span> <span class="font-mono">{firstEvidence(node.item)}</span></p>
               {/if}
             </div>
           {/if}
-          {#if node.item.codeSnippets && node.item.codeSnippets.length > 0}
-            <div class="ml-7" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()} role="presentation">
-              <CodeAccordion snippets={node.item.codeSnippets} />
+          {#if node.item.evidence?.some((e) => e.codeSnippets)}
+            <div class="ml-7 mt-2 space-y-2" onclick={(e: MouseEvent) => e.stopPropagation()} onkeydown={(e: KeyboardEvent) => e.stopPropagation()} role="presentation">
+              {#each node.item.evidence ?? [] as ev}
+                {#if ev.codeSnippets}
+                  <CodeAccordion snippets={[ev.codeSnippets]} />
+                {/if}
+              {/each}
             </div>
           {/if}
         </div>

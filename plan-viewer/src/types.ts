@@ -12,14 +12,12 @@ export interface GlossaryItem {
   id: string
   type: GlossaryType
   name: string
-  description: string
+  description?: string
   icon?: string
   parentId?: string
-  persona?: string
   analogy?: string
   responsibility?: string
-  evidence?: EvidenceRef[]
-  codeSnippets?: CodeSnippet[]
+  evidence?: Evidence[]
 }
 
 export interface CodeSnippet {
@@ -44,11 +42,12 @@ export interface ArchitectureEdge {
   animated?: boolean
 }
 
-export interface EvidenceRef {
-  path: string
+export interface Evidence {
+  path?: string
   startLine?: number
   endLine?: number
   label?: string
+  codeSnippets?: CodeSnippet
 }
 
 export interface Metaphor {
@@ -62,34 +61,29 @@ export interface StoryScene {
   action: string
   result?: string
   edgeRefs?: number[]
-  evidence?: EvidenceRef[]
-}
-
-export interface ComparisonRow {
-  label: string
-  current?: string
-  proposed?: string
-  note?: string
+  evidence?: Evidence[]
 }
 
 export interface FlowState {
-  description?: string
-  architectureEdges?: ArchitectureEdge[]
-  diagram?: DiagramOptions
+  architectureDiagram?: ArchitectureEdge[]
+  diagramOptions?: DiagramOptions
   storyTitle?: string
   scenes?: StoryScene[]
   takeaway?: string
 }
 
-export interface StatePair {
-  title: string
-  description?: string
+export interface Example {
+  title?: string
+  condition?: string
   currentState?: FlowState
   proposedState?: FlowState
-  comparison?: ComparisonRow[]
+}
+
+export interface Concern {
+  title: string
+  examples?: Example[]
   safeguards?: string[]
   takeaway?: string
-  evidence?: EvidenceRef[]
 }
 
 export interface Plan {
@@ -98,11 +92,7 @@ export interface Plan {
   glossary: GlossaryItem[]
   metaphor?: Metaphor
   takeaway?: string
-  safeguards?: string[]
-  evidence?: EvidenceRef[]
-  currentState?: FlowState
-  proposedState?: FlowState
-  pairs?: StatePair[]
+  pairs: Concern[]
 }
 
 export type NodePortPosition = 'top' | 'right' | 'bottom' | 'left'

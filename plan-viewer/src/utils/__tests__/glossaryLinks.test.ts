@@ -12,7 +12,7 @@ const glossary: GlossaryItem[] = [
     type: 'term',
     name: 'Child',
     description: 'Child glossary description',
-    persona: 'Ask <a href="#glossary:root">Root</a> first',
+    analogy: 'Ask <a href="#glossary:root">Root</a> first',
     responsibility: 'Own <a href="#glossary:missing">missing labels</a>',
     parentId: 'root',
   },

@@ -1,19 +1,8 @@
 // zod による Plan スキーマ定義。
 // JSON Schema (reference/plan.schema.json) では表現しきれない参照整合性は、
-// このファイルの後半に `validateReferences` として実装する（後続ステップで追加）。
-//
-// この段階では葉ノード相当の型のみを定義する。
+// このファイル後半の `validateReferences` として実装する。
 
 import { z } from 'zod'
-
-export const EvidenceRef = z
-  .object({
-    path: z.string().min(1),
-    startLine: z.number().int().min(1).optional(),
-    endLine: z.number().int().min(1).optional(),
-    label: z.string().optional(),
-  })
-  .strict()
 
 export const CodeSnippet = z
   .object({
@@ -26,12 +15,13 @@ export const CodeSnippet = z
   })
   .strict()
 
-export const ComparisonRow = z
+export const Evidence = z
   .object({
-    label: z.string(),
-    current: z.string(),
-    proposed: z.string(),
-    note: z.string().optional(),
+    path: z.string().min(1).optional(),
+    startLine: z.number().int().min(1).optional(),
+    endLine: z.number().int().min(1).optional(),
+    label: z.string().optional(),
+    codeSnippets: CodeSnippet.optional(),
   })
   .strict()
 
@@ -78,7 +68,7 @@ export const StoryScene = z
     action: z.string().min(1),
     result: z.string().optional(),
     edgeRefs: z.array(z.number().int().min(1)).optional(),
-    evidence: z.array(EvidenceRef).optional(),
+    evidence: z.array(Evidence).optional(),
   })
   .strict()
 
@@ -112,38 +102,40 @@ export const GlossaryItem = z
     id: z.string().min(1),
     type: GlossaryType,
     name: z.string(),
+    icon: z.string(),
     description: z.string().optional(),
-    icon: z.string().optional(),
     parentId: z.string().optional(),
-    persona: z.string().optional(),
     analogy: z.string().optional(),
     responsibility: z.string().optional(),
-    evidence: z.array(EvidenceRef).optional(),
-    codeSnippets: z.array(CodeSnippet).optional(),
+    evidence: z.array(Evidence).optional(),
   })
   .strict()
 
 export const State = z
   .object({
-    description: z.string().optional(),
-    architectureEdges: z.array(ArchitectureEdge).optional(),
-    diagram: DiagramOptions.optional(),
+    architectureDiagram: z.array(ArchitectureEdge).optional(),
+    diagramOptions: DiagramOptions.optional(),
     storyTitle: z.string().optional(),
     scenes: z.array(StoryScene).optional(),
     takeaway: z.string().optional(),
   })
   .strict()
 
-export const StatePair = z
+export const Example = z
   .object({
     title: z.string(),
-    description: z.string().optional(),
+    condition: z.string().optional(),
     currentState: State.optional(),
     proposedState: State.optional(),
-    comparison: z.array(ComparisonRow).optional(),
+  })
+  .strict()
+
+export const Concern = z
+  .object({
+    title: z.string(),
+    examples: z.array(Example).optional(),
     safeguards: z.array(z.string()).optional(),
     takeaway: z.string().optional(),
-    evidence: z.array(EvidenceRef).optional(),
   })
   .strict()
 
@@ -153,21 +145,10 @@ export const Plan = z
     description: z.string(),
     metaphor: Metaphor.optional(),
     takeaway: z.string().optional(),
-    evidence: z.array(EvidenceRef).optional(),
     glossary: z.array(GlossaryItem).min(1),
-    pairs: z.array(StatePair).min(1).optional(),
-    currentState: State.optional(),
-    proposedState: State.optional(),
+    pairs: z.array(Concern).min(1),
   })
   .strict()
-  .refine(
-    (p) => !(p.pairs && (p.currentState !== undefined || p.proposedState !== undefined)),
-    {
-      message:
-        'plan must not define both top-level currentState/proposedState and pairs; use one form only',
-      path: ['pairs'],
-    },
-  )
 
 // 参照整合性チェック。zod / JSON Schema では表現できない制約を扱う。
 // 戻り値は { path: string, message: string } の配列（空なら問題なし）。
@@ -223,11 +204,11 @@ export function validateReferences(plan) {
   // state 単位の検査
   const checkState = (statePath, state) => {
     if (!state) return
-    const edges = state.architectureEdges ?? []
+    const edges = state.architectureDiagram ?? []
     const orderSet = new Set()
 
     edges.forEach((edge, i) => {
-      const ePath = `${statePath}.architectureEdges[${i}]`
+      const ePath = `${statePath}.architectureDiagram[${i}]`
       if (edge.order !== i + 1) {
         push(`${ePath}.order`, `order must be ${i + 1} (consecutive from 1), got ${edge.order}`)
       }
@@ -257,13 +238,13 @@ export function validateReferences(plan) {
       })
     })
 
-    // diagram
-    const diagram = state.diagram
+    // diagramOptions
+    const diagram = state.diagramOptions
     if (diagram?.nodePositions) {
       for (const key of Object.keys(diagram.nodePositions)) {
         if (!ids.has(key)) {
           push(
-            `${statePath}.diagram.nodePositions[${JSON.stringify(key)}]`,
+            `${statePath}.diagramOptions.nodePositions[${JSON.stringify(key)}]`,
             `unknown glossary id`,
           )
         }
@@ -271,7 +252,7 @@ export function validateReferences(plan) {
     }
     if (diagram?.edges) {
       for (const key of Object.keys(diagram.edges)) {
-        const ePath = `${statePath}.diagram.edges[${JSON.stringify(key)}]`
+        const ePath = `${statePath}.diagramOptions.edges[${JSON.stringify(key)}]`
         if (/^\d+$/.test(key)) {
           if (!orderSet.has(Number(key))) {
             push(ePath, `references unknown architecture edge order in this state: ${key}`)
@@ -290,15 +271,13 @@ export function validateReferences(plan) {
     }
   }
 
-  if (plan.pairs) {
-    plan.pairs.forEach((pair, i) => {
-      checkState(`pairs[${i}].currentState`, pair.currentState)
-      checkState(`pairs[${i}].proposedState`, pair.proposedState)
+  ;(plan.pairs ?? []).forEach((concern, i) => {
+    ;(concern.examples ?? []).forEach((example, j) => {
+      const base = `pairs[${i}].examples[${j}]`
+      checkState(`${base}.currentState`, example.currentState)
+      checkState(`${base}.proposedState`, example.proposedState)
     })
-  } else {
-    checkState('currentState', plan.currentState)
-    checkState('proposedState', plan.proposedState)
-  }
+  })
 
   return errors
 }

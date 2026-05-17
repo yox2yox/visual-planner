@@ -44,17 +44,19 @@
   {#if item.description}
     <span class="mt-2 block text-gray-700">{tooltipText(item.description)}</span>
   {/if}
-  {#if item.persona || item.responsibility}
+  {#if item.analogy || item.responsibility}
     <span class="mt-2 grid gap-1 text-gray-700">
-      {#if item.persona}
-        <span><span class="font-semibold">役名:</span> {tooltipText(item.persona)}</span>
+      {#if item.analogy}
+        <span><span class="font-semibold">たとえると:</span> {tooltipText(item.analogy)}</span>
       {/if}
       {#if item.responsibility}
         <span><span class="font-semibold">担当:</span> {tooltipText(item.responsibility)}</span>
       {/if}
     </span>
   {/if}
-  {#if item.codeSnippets && item.codeSnippets.length > 0}
-    <CodeAccordion snippets={item.codeSnippets} compact />
-  {/if}
+  {#each item.evidence ?? [] as ev}
+    {#if ev.codeSnippets}
+      <CodeAccordion snippets={[ev.codeSnippets]} compact />
+    {/if}
+  {/each}
 </div>

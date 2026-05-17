@@ -1,49 +1,30 @@
-import type { Plan, StatePair } from '../types'
+import type { Concern, Example, Plan } from '../types'
 
 export interface NormalizedPlan {
-  pairs: StatePair[]
+  pairs: Concern[]
 }
 
-function hasVisibleContent(pair: StatePair): boolean {
+function exampleHasContent(ex: Example): boolean {
   return Boolean(
-    pair.currentState !== undefined ||
-      pair.proposedState !== undefined ||
-      pair.description ||
-      pair.comparison?.length ||
-      pair.safeguards?.length ||
-      pair.takeaway ||
-      pair.evidence?.length,
+    ex.currentState !== undefined ||
+      ex.proposedState !== undefined ||
+      ex.condition ||
+      ex.title,
+  )
+}
+
+function concernHasVisibleContent(c: Concern): boolean {
+  return Boolean(
+    (c.examples ?? []).some(exampleHasContent) ||
+      c.safeguards?.length ||
+      c.takeaway,
   )
 }
 
 export function normalizePlan(plan: Plan): NormalizedPlan {
-  const hasPairs = Array.isArray(plan.pairs)
-  const hasLegacy = plan.currentState !== undefined || plan.proposedState !== undefined
-
-  if (hasPairs && hasLegacy) {
-    throw new Error(
-      'Plan cannot define both top-level currentState/proposedState and pairs. Use one form only.',
-    )
+  const pairs = Array.isArray(plan.pairs) ? plan.pairs : []
+  if (pairs.length === 0) {
+    throw new Error('pairs must not be empty')
   }
-
-  if (hasPairs) {
-    if (plan.pairs!.length === 0) {
-      throw new Error('pairs must not be an empty array')
-    }
-    return { pairs: plan.pairs!.filter(hasVisibleContent) }
-  }
-
-  if (hasLegacy) {
-    return {
-      pairs: [
-        {
-          title: '',
-          currentState: plan.currentState,
-          proposedState: plan.proposedState,
-        },
-      ],
-    }
-  }
-
-  return { pairs: [] }
+  return { pairs: pairs.filter(concernHasVisibleContent) }
 }

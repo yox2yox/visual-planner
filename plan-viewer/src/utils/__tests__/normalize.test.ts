@@ -6,66 +6,33 @@ const baseGlossary = [{ id: 'a', type: 'server' as const, name: 'A', description
 
 function makeState(label = 'call') {
   return {
-    description: 'desc',
-    architectureEdges: [{ order: 1, source: 'a', target: 'a', label, data: 'X' }],
+    architectureDiagram: [{ order: 1, source: 'a', target: 'a', label, data: 'X' }],
   }
 }
 
 describe('normalizePlan', () => {
-  it('returns pairs as-is when new format is used', () => {
+  it('returns concerns as-is when content is present', () => {
     const plan: Plan = {
       title: 't',
       description: 'd',
       glossary: baseGlossary,
       pairs: [
-        { title: 'P1', currentState: makeState(), proposedState: makeState('P1-new') },
-        { title: 'P2', proposedState: makeState('P2') },
+        {
+          title: 'C1',
+          examples: [
+            { title: 'ex1', currentState: makeState(), proposedState: makeState('C1-new') },
+          ],
+        },
+        {
+          title: 'C2',
+          examples: [{ title: 'ex2', proposedState: makeState('C2') }],
+        },
       ],
     }
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(2)
-    expect(result.pairs[0].title).toBe('P1')
-    expect(result.pairs[1].title).toBe('P2')
-    expect(result.pairs[1].currentState).toBeUndefined()
-  })
-
-  it('wraps legacy currentState/proposedState into a single pair', () => {
-    const plan: Plan = {
-      title: 't',
-      description: 'd',
-      glossary: baseGlossary,
-      currentState: makeState('old'),
-      proposedState: makeState('new'),
-    }
-    const result = normalizePlan(plan)
-    expect(result.pairs).toHaveLength(1)
-    expect(result.pairs[0].title).toBe('')
-    expect(result.pairs[0].currentState?.architectureEdges?.[0].label).toBe('old')
-    expect(result.pairs[0].proposedState?.architectureEdges?.[0].label).toBe('new')
-  })
-
-  it('wraps legacy with only currentState', () => {
-    const plan: Plan = {
-      title: 't',
-      description: 'd',
-      glossary: baseGlossary,
-      currentState: makeState('only-current'),
-    }
-    const result = normalizePlan(plan)
-    expect(result.pairs).toHaveLength(1)
-    expect(result.pairs[0].currentState?.architectureEdges?.[0].label).toBe('only-current')
-    expect(result.pairs[0].proposedState).toBeUndefined()
-  })
-
-  it('throws when both pairs and legacy currentState are provided', () => {
-    const plan: Plan = {
-      title: 't',
-      description: 'd',
-      glossary: baseGlossary,
-      currentState: makeState(),
-      pairs: [{ title: 'P', proposedState: makeState() }],
-    }
-    expect(() => normalizePlan(plan)).toThrow(/both/i)
+    expect(result.pairs[0].title).toBe('C1')
+    expect(result.pairs[1].examples?.[0].currentState).toBeUndefined()
   })
 
   it('throws when pairs is an empty array', () => {
@@ -78,15 +45,15 @@ describe('normalizePlan', () => {
     expect(() => normalizePlan(plan)).toThrow(/empty/i)
   })
 
-  it('filters out pairs that have neither currentState nor proposedState', () => {
+  it('filters out concerns that have neither examples, safeguards, nor takeaway', () => {
     const plan: Plan = {
       title: 't',
       description: 'd',
       glossary: baseGlossary,
       pairs: [
-        { title: 'keep', proposedState: makeState() },
+        { title: 'keep', examples: [{ title: 'e', proposedState: makeState() }] },
         { title: 'drop' },
-        { title: 'also-keep', currentState: makeState() },
+        { title: 'also-keep', safeguards: ['be careful'] },
       ],
     }
     const result = normalizePlan(plan)
@@ -94,7 +61,7 @@ describe('normalizePlan', () => {
     expect(result.pairs.map((p) => p.title)).toEqual(['keep', 'also-keep'])
   })
 
-  it('keeps explanation-only pairs without diagrams', () => {
+  it('keeps explanation-only concerns without diagrams', () => {
     const plan: Plan = {
       title: 't',
       description: 'd',
@@ -102,22 +69,12 @@ describe('normalizePlan', () => {
       pairs: [
         {
           title: 'explain',
-          comparison: [{ label: 'shape', current: 'many', proposed: 'few' }],
+          takeaway: 'pithy summary',
         },
       ],
     }
     const result = normalizePlan(plan)
     expect(result.pairs).toHaveLength(1)
     expect(result.pairs[0].title).toBe('explain')
-  })
-
-  it('returns empty pairs when neither legacy nor pairs are present', () => {
-    const plan: Plan = {
-      title: 't',
-      description: 'd',
-      glossary: baseGlossary,
-    }
-    const result = normalizePlan(plan)
-    expect(result.pairs).toEqual([])
   })
 })
